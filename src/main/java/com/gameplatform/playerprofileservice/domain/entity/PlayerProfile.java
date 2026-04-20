@@ -34,6 +34,12 @@ public class PlayerProfile {
     @Column(name = "telegram_username")
     private String telegramUsername;
 
+    @Column(name = "vk_username")
+    private String vkUsername;
+
+    @Column(name = "discord_username")
+    private String discordUsername;
+
     @Column(name = "current_game_nickname")
     private String currentGameNickname;
 
