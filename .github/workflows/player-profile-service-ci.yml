@@ -77,14 +77,14 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Validate and apply Flyway migrations
+      - name: Apply and validate Flyway migrations
         run: >
           ./gradlew --no-daemon
           -Dflyway.url=jdbc:postgresql://localhost:5432/player_profile_db
           -Dflyway.user=admin
           -Dflyway.password=supersecret_pass_123
           -Dflyway.locations=filesystem:src/main/resources/db/migration
-          flywayValidate flywayMigrate
+          flywayMigrate flywayValidate
 
   docker-publish:
     name: Publish Docker Image
