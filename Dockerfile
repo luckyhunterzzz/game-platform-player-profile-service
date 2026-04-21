@@ -3,8 +3,8 @@ WORKDIR /app
 
 COPY gradlew build.gradle settings.gradle ./
 COPY gradle gradle
-RUN chmod +x gradlew
 
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 RUN --mount=type=cache,target=/root/.gradle ./gradlew dependencies --no-daemon
 
 COPY src src

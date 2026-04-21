@@ -22,6 +22,8 @@ public class PlayerProfileResponseDto {
     private String firstName;
     private String lastName;
     private String telegramUsername;
+    private String vkUsername;
+    private String discordUsername;
     private String currentGameNickname;
     private PlayerProfileStatus status;
     private OffsetDateTime createdAt;
