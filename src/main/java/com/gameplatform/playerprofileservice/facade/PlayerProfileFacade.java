@@ -28,4 +28,9 @@ public class PlayerProfileFacade {
         PlayerProfile playerProfile = playerProfileService.updateProfile(userId, email, request);
         return playerProfileResponseConverter.toResponse(playerProfile);
     }
+
+    public PlayerProfileResponseDto getProfileByUserId(UUID userId) {
+        PlayerProfile playerProfile = playerProfileService.getProfileByUserId(userId);
+        return playerProfileResponseConverter.toResponse(playerProfile);
+    }
 }

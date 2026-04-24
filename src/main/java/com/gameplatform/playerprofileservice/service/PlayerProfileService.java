@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -44,6 +45,11 @@ public class PlayerProfileService {
         playerProfile.setUpdatedAt(OffsetDateTime.now(clock));
 
         return playerProfileRepository.save(playerProfile);
+    }
+
+    public PlayerProfile getProfileByUserId(UUID userId) {
+        return playerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("Player profile not found for userId: " + userId));
     }
 
     private PlayerProfile createProfile(UUID userId, String email) {
