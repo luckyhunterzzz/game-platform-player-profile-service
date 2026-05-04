@@ -89,7 +89,6 @@ class PlayerProfileServiceTest {
                 .build();
 
         when(playerProfileRepository.findByUserId(userId)).thenReturn(Optional.of(existingProfile));
-        when(playerProfileRepository.save(any(PlayerProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         PlayerProfileUpdateRequestDto request = new PlayerProfileUpdateRequestDto(
                 null,
