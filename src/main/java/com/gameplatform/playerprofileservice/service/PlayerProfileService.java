@@ -8,10 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.NoSuchElementException;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +38,8 @@ public class PlayerProfileService {
     public PlayerProfile updateProfile(UUID userId, String email, PlayerProfileUpdateRequestDto request) {
         PlayerProfile playerProfile = getOrCreateProfile(userId, email);
 
+        validateRequiredProfileFields(request);
+
         playerProfile.setFirstName(normalize(request.firstName()));
         playerProfile.setLastName(normalize(request.lastName()));
         playerProfile.setTelegramUsername(normalize(request.telegramUsername()));
@@ -44,6 +50,11 @@ public class PlayerProfileService {
         playerProfile.setUpdatedAt(OffsetDateTime.now(clock));
 
         return playerProfileRepository.save(playerProfile);
+    }
+
+    public PlayerProfile getProfileByUserId(UUID userId) {
+        return playerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("Player profile not found for userId: " + userId));
     }
 
     private PlayerProfile createProfile(UUID userId, String email) {
@@ -80,6 +91,36 @@ public class PlayerProfileService {
         return hasGameNickname && filledContactCount >= MIN_FILLED_CONTACTS_FOR_COMPLETE
                 ? PlayerProfileStatus.COMPLETE
                 : PlayerProfileStatus.INCOMPLETE;
+    }
+
+    private void validateRequiredProfileFields(PlayerProfileUpdateRequestDto request) {
+        if (!StringUtils.hasText(request.currentGameNickname())) {
+            throw new ResponseStatusException(
+                    BAD_REQUEST,
+                    "Game nickname is required"
+            );
+        }
+
+        int filledContacts = 0;
+
+        if (StringUtils.hasText(request.telegramUsername())) {
+            filledContacts++;
+        }
+
+        if (StringUtils.hasText(request.vkUsername())) {
+            filledContacts++;
+        }
+
+        if (StringUtils.hasText(request.discordUsername())) {
+            filledContacts++;
+        }
+
+        if (filledContacts < MIN_FILLED_CONTACTS_FOR_COMPLETE) {
+            throw new ResponseStatusException(
+                    BAD_REQUEST,
+                    "At least two contact channels are required: Telegram, VK, Discord"
+            );
+        }
     }
 
     private int countFilledContacts(PlayerProfile playerProfile) {
