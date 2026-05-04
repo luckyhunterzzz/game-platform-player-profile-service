@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -19,7 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -73,7 +74,7 @@ class PlayerProfileServiceTest {
     }
 
     @Test
-    void shouldKeepProfileIncompleteAndNormalizeBlankValues() {
+    void shouldRejectProfileUpdateWhenRequiredFieldsAreBlank() {
         UUID userId = UUID.randomUUID();
         OffsetDateTime createdAt = OffsetDateTime.parse("2026-04-18T12:00:00Z");
 
@@ -99,11 +100,11 @@ class PlayerProfileServiceTest {
                 "   "
         );
 
-        PlayerProfile result = playerProfileService.updateProfile(userId, "user@example.com", request);
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> playerProfileService.updateProfile(userId, "user@example.com", request)
+        );
 
-        assertEquals(PlayerProfileStatus.INCOMPLETE, result.getStatus());
-        assertNull(result.getTelegramUsername());
-        assertNull(result.getCurrentGameNickname());
-        assertEquals("vk_user", result.getVkUsername());
+        assertEquals("Game nickname is required", exception.getReason());
     }
 }
