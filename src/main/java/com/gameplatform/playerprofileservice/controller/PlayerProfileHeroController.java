@@ -1,6 +1,8 @@
 package com.gameplatform.playerprofileservice.controller;
 
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroCreateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroPowerGradeUpdateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroTalentLevelUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerProfileHeroResponseDto;
 import com.gameplatform.playerprofileservice.facade.PlayerProfileHeroFacade;
 import com.gameplatform.playerprofileservice.utility.HeaderNames;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,6 +46,26 @@ public class PlayerProfileHeroController {
             @RequestBody @Valid PlayerProfileHeroCreateRequestDto request
     ) {
         return ResponseEntity.ok(playerProfileHeroFacade.addHero(userId, email, request));
+    }
+
+    @PutMapping("/{profileHeroId}/power-grade")
+    public ResponseEntity<PlayerProfileHeroResponseDto> updateHeroPowerGrade(
+            @RequestHeader(HeaderNames.USER_ID) UUID userId,
+            @RequestHeader(HeaderNames.USER_EMAIL) String email,
+            @PathVariable UUID profileHeroId,
+            @RequestBody @Valid PlayerProfileHeroPowerGradeUpdateRequestDto request
+    ) {
+        return ResponseEntity.ok(playerProfileHeroFacade.updateHeroPowerGrade(userId, email, profileHeroId, request));
+    }
+
+    @PutMapping("/{profileHeroId}/talent-level")
+    public ResponseEntity<PlayerProfileHeroResponseDto> updateHeroTalentLevel(
+            @RequestHeader(HeaderNames.USER_ID) UUID userId,
+            @RequestHeader(HeaderNames.USER_EMAIL) String email,
+            @PathVariable UUID profileHeroId,
+            @RequestBody @Valid PlayerProfileHeroTalentLevelUpdateRequestDto request
+    ) {
+        return ResponseEntity.ok(playerProfileHeroFacade.updateHeroTalentLevel(userId, email, profileHeroId, request));
     }
 
     @DeleteMapping("/{profileHeroId}")
