@@ -2,6 +2,7 @@ package com.gameplatform.playerprofileservice.service;
 
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfile;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
+import com.gameplatform.playerprofileservice.domain.enums.HeroPowerGrade;
 import com.gameplatform.playerprofileservice.repository.PlayerProfileHeroRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +38,45 @@ public class PlayerProfileHeroService {
                 .id(UUID.randomUUID())
                 .playerProfileId(playerProfile.getId())
                 .heroId(heroId)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .talentLevel(0)
                 .createdAt(now)
                 .build();
 
+        return playerProfileHeroRepository.save(playerProfileHero);
+    }
+
+    @Transactional
+    public PlayerProfileHero updateHeroPowerGrade(UUID userId,
+                                                  String email,
+                                                  UUID profileHeroId,
+                                                  HeroPowerGrade powerGrade) {
+        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+
+        PlayerProfileHero playerProfileHero = playerProfileHeroRepository
+                .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Profile hero not found with id: " + profileHeroId
+                ));
+
+        playerProfileHero.setPowerGrade(powerGrade);
+        return playerProfileHeroRepository.save(playerProfileHero);
+    }
+
+    @Transactional
+    public PlayerProfileHero updateHeroTalentLevel(UUID userId,
+                                                   String email,
+                                                   UUID profileHeroId,
+                                                   Integer talentLevel) {
+        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+
+        PlayerProfileHero playerProfileHero = playerProfileHeroRepository
+                .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Profile hero not found with id: " + profileHeroId
+                ));
+
+        playerProfileHero.setTalentLevel(talentLevel);
         return playerProfileHeroRepository.save(playerProfileHero);
     }
 

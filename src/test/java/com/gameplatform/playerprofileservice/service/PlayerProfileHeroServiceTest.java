@@ -2,6 +2,7 @@ package com.gameplatform.playerprofileservice.service;
 
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfile;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
+import com.gameplatform.playerprofileservice.domain.enums.HeroPowerGrade;
 import com.gameplatform.playerprofileservice.repository.PlayerProfileHeroRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,6 +86,73 @@ class PlayerProfileHeroServiceTest {
         assertEquals(101L, secondResult.getHeroId());
         assertEquals(profileId, firstResult.getPlayerProfileId());
         assertEquals(profileId, secondResult.getPlayerProfileId());
+        assertEquals(HeroPowerGrade.FULLY_ASCENDED, firstResult.getPowerGrade());
+        assertEquals(HeroPowerGrade.FULLY_ASCENDED, secondResult.getPowerGrade());
+        assertEquals(0, firstResult.getTalentLevel());
+        assertEquals(0, secondResult.getTalentLevel());
+    }
+
+    @Test
+    void shouldUpdateHeroPowerGrade() {
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID profileHeroId = UUID.randomUUID();
+
+        PlayerProfile playerProfile = buildProfile(profileId, userId);
+        PlayerProfileHero playerProfileHero = PlayerProfileHero.builder()
+                .id(profileHeroId)
+                .playerProfileId(profileId)
+                .heroId(101L)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
+                .build();
+
+        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
+                .thenReturn(Optional.of(playerProfileHero));
+        when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlayerProfileHero updated = playerProfileHeroService.updateHeroPowerGrade(
+                userId,
+                "user@example.com",
+                profileHeroId,
+                HeroPowerGrade.FIRST_LIMIT_BROKEN
+        );
+
+        assertEquals(HeroPowerGrade.FIRST_LIMIT_BROKEN, updated.getPowerGrade());
+        verify(playerProfileHeroRepository).save(playerProfileHero);
+    }
+
+    @Test
+    void shouldUpdateHeroTalentLevel() {
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID profileHeroId = UUID.randomUUID();
+
+        PlayerProfile playerProfile = buildProfile(profileId, userId);
+        PlayerProfileHero playerProfileHero = PlayerProfileHero.builder()
+                .id(profileHeroId)
+                .playerProfileId(profileId)
+                .heroId(101L)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .talentLevel(0)
+                .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
+                .build();
+
+        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
+                .thenReturn(Optional.of(playerProfileHero));
+        when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlayerProfileHero updated = playerProfileHeroService.updateHeroTalentLevel(
+                userId,
+                "user@example.com",
+                profileHeroId,
+                25
+        );
+
+        assertEquals(25, updated.getTalentLevel());
+        verify(playerProfileHeroRepository).save(playerProfileHero);
     }
 
     @Test
@@ -98,6 +166,8 @@ class PlayerProfileHeroServiceTest {
                 .id(profileHeroId)
                 .playerProfileId(profileId)
                 .heroId(101L)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .talentLevel(0)
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
 
@@ -143,6 +213,8 @@ class PlayerProfileHeroServiceTest {
                 .id(UUID.randomUUID())
                 .playerProfileId(profileId)
                 .heroId(heroId)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .talentLevel(0)
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
     }
