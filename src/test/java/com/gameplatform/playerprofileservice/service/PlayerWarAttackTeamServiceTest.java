@@ -4,6 +4,7 @@ import com.gameplatform.playerprofileservice.domain.entity.PlayerProfile;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttack;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttackHero;
+import com.gameplatform.playerprofileservice.domain.enums.HeroPowerGrade;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackSlotUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamsUpdateRequestDto;
@@ -118,6 +119,7 @@ class PlayerWarAttackTeamServiceTest {
                 .id(profileHeroId)
                 .playerProfileId(foreignProfileId)
                 .heroId(101L)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
                 .createdAt(OffsetDateTime.parse("2026-04-23T12:00:00Z"))
                 .build()));
 
@@ -150,6 +152,7 @@ class PlayerWarAttackTeamServiceTest {
                 .id(profileHeroId)
                 .playerProfileId(profileId)
                 .heroId(101L)
+                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
                 .createdAt(OffsetDateTime.parse("2026-04-23T12:00:00Z"))
                 .build()));
         when(teamWarAttackHeroRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));

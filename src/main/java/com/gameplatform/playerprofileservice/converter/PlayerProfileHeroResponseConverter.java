@@ -12,6 +12,8 @@ public class PlayerProfileHeroResponseConverter {
                 .id(playerProfileHero.getId())
                 .playerProfileId(playerProfileHero.getPlayerProfileId())
                 .heroId(playerProfileHero.getHeroId())
+                .powerGrade(playerProfileHero.getPowerGrade())
+                .talentLevel(playerProfileHero.getTalentLevel())
                 .createdAt(playerProfileHero.getCreatedAt())
                 .build();
     }
