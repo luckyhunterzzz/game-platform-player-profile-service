@@ -19,25 +19,22 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "team_war_attack")
-public class TeamWarAttack {
+@Table(name = "war_stat_attack_team_slot")
+public class WarStatAttackTeamSlot {
 
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "player_profile_id", nullable = false)
-    private UUID playerProfileId;
+    @Column(name = "team_id", nullable = false)
+    private UUID teamId;
 
-    @Column(name = "war_mode_id", nullable = false)
-    private UUID warModeId;
+    @Column(name = "slot", nullable = false)
+    private Short slot;
 
-    @Column(name = "team_index", nullable = false)
-    private Short teamIndex;
+    @Column(name = "player_profile_hero_id", nullable = false)
+    private UUID playerProfileHeroId;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
 }
