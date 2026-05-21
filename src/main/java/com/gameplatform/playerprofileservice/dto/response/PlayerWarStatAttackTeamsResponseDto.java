@@ -5,8 +5,8 @@ import lombok.Builder;
 import java.util.List;
 
 @Builder
-public record PlayerWarAttackTeamsResponseDto(
+public record PlayerWarStatAttackTeamsResponseDto(
         List<PlayerWarModeResponseDto> warModes,
-        List<PlayerWarAttackTeamResponseDto> teams
+        List<PlayerWarStatAttackTeamResponseDto> teams
 ) {
 }

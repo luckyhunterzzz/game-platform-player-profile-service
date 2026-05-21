@@ -1,9 +1,11 @@
 package com.gameplatform.playerprofileservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfile;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttack;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttackHero;
+import com.gameplatform.playerprofileservice.domain.entity.WarMode;
 import com.gameplatform.playerprofileservice.domain.enums.HeroPowerGrade;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackSlotUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamUpdateRequestDto;
@@ -11,6 +13,7 @@ import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamsUpd
 import com.gameplatform.playerprofileservice.repository.PlayerProfileHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackRepository;
+import com.gameplatform.playerprofileservice.repository.WarModeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,25 +52,33 @@ class PlayerWarAttackTeamServiceTest {
     @Mock
     private TeamWarAttackHeroRepository teamWarAttackHeroRepository;
 
+    @Mock
+    private WarModeRepository warModeRepository;
+
     private PlayerWarAttackTeamService playerWarAttackTeamService;
+    private WarMode universalWarMode;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-04-23T12:00:00Z"), ZoneOffset.UTC);
+        universalWarMode = buildWarMode();
         playerWarAttackTeamService = new PlayerWarAttackTeamService(
                 playerProfileService,
                 playerProfileHeroRepository,
                 teamWarAttackRepository,
                 teamWarAttackHeroRepository,
+                warModeRepository,
+                new ObjectMapper(),
                 clock
         );
+        when(warModeRepository.findAllByActiveTrueOrderBySortOrderAsc()).thenReturn(List.of(universalWarMode));
     }
 
     @Test
     void shouldReturnSixTeamsWithFiveSlots() {
         UUID userId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
-        List<TeamWarAttack> teams = buildTeams(profileId);
+        List<TeamWarAttack> teams = buildTeams(profileId, universalWarMode.getId());
         List<TeamWarAttackHero> teamHeroes = List.of(
                 buildTeamHero(teams.get(0).getId(), UUID.randomUUID(), (short) 1),
                 buildTeamHero(teams.get(0).getId(), UUID.randomUUID(), (short) 3),
@@ -75,16 +86,18 @@ class PlayerWarAttackTeamServiceTest {
         );
 
         when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
-        when(teamWarAttackRepository.findAllByPlayerProfileIdOrderByTeamIndexAsc(profileId)).thenReturn(teams);
+        when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(teamWarAttackHeroRepository.findAllByTeamWarAttackIdIn(teams.stream().map(TeamWarAttack::getId).toList()))
                 .thenReturn(teamHeroes);
 
-        List<PlayerWarAttackTeamService.WarAttackTeamView> result = playerWarAttackTeamService.getMyTeams(userId, "user@example.com");
+        PlayerWarAttackTeamService.WarAttackTeamsView result = playerWarAttackTeamService.getMyTeams(userId, "user@example.com");
 
-        assertEquals(6, result.size());
-        assertEquals(5, result.get(0).slots().size());
-        assertEquals(1, result.get(0).teamIndex());
-        assertNull(result.get(0).slots().get(1).playerProfileHeroId());
+        assertEquals(1, result.warModes().size());
+        assertEquals(6, result.teams().size());
+        assertEquals(5, result.teams().get(0).slots().size());
+        assertEquals(1, result.teams().get(0).teamIndex());
+        assertEquals("UNIVERSAL", result.teams().get(0).warModeCode());
+        assertNull(result.teams().get(0).slots().get(1).playerProfileHeroId());
     }
 
     @Test
@@ -92,12 +105,12 @@ class PlayerWarAttackTeamServiceTest {
         UUID duplicateHeroId = UUID.randomUUID();
 
         PlayerWarAttackTeamsUpdateRequestDto request = new PlayerWarAttackTeamsUpdateRequestDto(List.of(
-                buildTeamRequest(1, duplicateHeroId, null, null, null, null),
-                buildTeamRequest(2, duplicateHeroId, null, null, null, null),
-                buildTeamRequest(3, null, null, null, null, null),
-                buildTeamRequest(4, null, null, null, null, null),
-                buildTeamRequest(5, null, null, null, null, null),
-                buildTeamRequest(6, null, null, null, null, null)
+                buildTeamRequest("UNIVERSAL", 1, duplicateHeroId, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 2, duplicateHeroId, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 3, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 4, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 5, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 6, null, null, null, null, null)
         ));
 
         assertThrows(ResponseStatusException.class, () ->
@@ -111,10 +124,10 @@ class PlayerWarAttackTeamServiceTest {
         UUID profileId = UUID.randomUUID();
         UUID foreignProfileId = UUID.randomUUID();
         UUID profileHeroId = UUID.randomUUID();
-        List<TeamWarAttack> teams = buildTeams(profileId);
+        List<TeamWarAttack> teams = buildTeams(profileId, universalWarMode.getId());
 
         when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
-        when(teamWarAttackRepository.findAllByPlayerProfileIdOrderByTeamIndexAsc(profileId)).thenReturn(teams);
+        when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(playerProfileHeroRepository.findAllById(any())).thenReturn(List.of(PlayerProfileHero.builder()
                 .id(profileHeroId)
                 .playerProfileId(foreignProfileId)
@@ -124,12 +137,12 @@ class PlayerWarAttackTeamServiceTest {
                 .build()));
 
         PlayerWarAttackTeamsUpdateRequestDto request = new PlayerWarAttackTeamsUpdateRequestDto(List.of(
-                buildTeamRequest(1, profileHeroId, null, null, null, null),
-                buildTeamRequest(2, null, null, null, null, null),
-                buildTeamRequest(3, null, null, null, null, null),
-                buildTeamRequest(4, null, null, null, null, null),
-                buildTeamRequest(5, null, null, null, null, null),
-                buildTeamRequest(6, null, null, null, null, null)
+                buildTeamRequest("UNIVERSAL", 1, profileHeroId, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 2, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 3, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 4, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 5, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 6, null, null, null, null, null)
         ));
 
         assertThrows(ResponseStatusException.class, () ->
@@ -144,10 +157,10 @@ class PlayerWarAttackTeamServiceTest {
         UUID userId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         UUID profileHeroId = UUID.randomUUID();
-        List<TeamWarAttack> teams = buildTeams(profileId);
+        List<TeamWarAttack> teams = buildTeams(profileId, universalWarMode.getId());
 
         when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
-        when(teamWarAttackRepository.findAllByPlayerProfileIdOrderByTeamIndexAsc(profileId)).thenReturn(teams);
+        when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(playerProfileHeroRepository.findAllById(any())).thenReturn(List.of(PlayerProfileHero.builder()
                 .id(profileHeroId)
                 .playerProfileId(profileId)
@@ -158,18 +171,18 @@ class PlayerWarAttackTeamServiceTest {
         when(teamWarAttackHeroRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         PlayerWarAttackTeamsUpdateRequestDto request = new PlayerWarAttackTeamsUpdateRequestDto(List.of(
-                buildTeamRequest(1, profileHeroId, null, null, null, null),
-                buildTeamRequest(2, null, null, null, null, null),
-                buildTeamRequest(3, null, null, null, null, null),
-                buildTeamRequest(4, null, null, null, null, null),
-                buildTeamRequest(5, null, null, null, null, null),
-                buildTeamRequest(6, null, null, null, null, null)
+                buildTeamRequest("UNIVERSAL", 1, profileHeroId, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 2, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 3, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 4, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 5, null, null, null, null, null),
+                buildTeamRequest("UNIVERSAL", 6, null, null, null, null, null)
         ));
 
-        List<PlayerWarAttackTeamService.WarAttackTeamView> result =
+        PlayerWarAttackTeamService.WarAttackTeamsView result =
                 playerWarAttackTeamService.updateMyTeams(userId, "user@example.com", request);
 
-        assertEquals(profileHeroId, result.get(0).slots().get(0).playerProfileHeroId());
+        assertEquals(profileHeroId, result.teams().get(0).slots().get(0).playerProfileHeroId());
         verify(teamWarAttackHeroRepository).deleteAllByTeamWarAttackIdIn(teams.stream().map(TeamWarAttack::getId).toList());
         verify(teamWarAttackHeroRepository).saveAll(anyList());
     }
@@ -184,22 +197,36 @@ class PlayerWarAttackTeamServiceTest {
                 .build();
     }
 
-    private List<TeamWarAttack> buildTeams(UUID profileId) {
+    private List<TeamWarAttack> buildTeams(UUID profileId, UUID warModeId) {
         return List.of(
-                buildTeam(profileId, (short) 1),
-                buildTeam(profileId, (short) 2),
-                buildTeam(profileId, (short) 3),
-                buildTeam(profileId, (short) 4),
-                buildTeam(profileId, (short) 5),
-                buildTeam(profileId, (short) 6)
+                buildTeam(profileId, warModeId, (short) 1),
+                buildTeam(profileId, warModeId, (short) 2),
+                buildTeam(profileId, warModeId, (short) 3),
+                buildTeam(profileId, warModeId, (short) 4),
+                buildTeam(profileId, warModeId, (short) 5),
+                buildTeam(profileId, warModeId, (short) 6)
         );
     }
 
-    private TeamWarAttack buildTeam(UUID profileId, short teamIndex) {
+    private TeamWarAttack buildTeam(UUID profileId, UUID warModeId, short teamIndex) {
         return TeamWarAttack.builder()
                 .id(UUID.randomUUID())
                 .playerProfileId(profileId)
+                .warModeId(warModeId)
                 .teamIndex(teamIndex)
+                .createdAt(OffsetDateTime.parse("2026-04-22T12:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-22T12:00:00Z"))
+                .build();
+    }
+
+    private WarMode buildWarMode() {
+        return WarMode.builder()
+                .id(UUID.randomUUID())
+                .code("UNIVERSAL")
+                .nameJson("{\"ru\":\"Универсальная\",\"en\":\"Universal\"}")
+                .descriptionJson("{\"ru\":\"Команды для любого режима войны\",\"en\":\"Teams for any war mode\"}")
+                .sortOrder((short) 1)
+                .active(true)
                 .createdAt(OffsetDateTime.parse("2026-04-22T12:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-04-22T12:00:00Z"))
                 .build();
@@ -215,13 +242,15 @@ class PlayerWarAttackTeamServiceTest {
                 .build();
     }
 
-    private PlayerWarAttackTeamUpdateRequestDto buildTeamRequest(int teamIndex,
+    private PlayerWarAttackTeamUpdateRequestDto buildTeamRequest(String warModeCode,
+                                                                 int teamIndex,
                                                                  UUID slot1,
                                                                  UUID slot2,
                                                                  UUID slot3,
                                                                  UUID slot4,
                                                                  UUID slot5) {
         return new PlayerWarAttackTeamUpdateRequestDto(
+                warModeCode,
                 teamIndex,
                 List.of(
                         new PlayerWarAttackSlotUpdateRequestDto(1, slot1),

@@ -8,7 +8,7 @@ import java.util.List;
 
 public record PlayerWarAttackTeamsUpdateRequestDto(
         @NotNull
-        @Size(min = 6, max = 6)
+        @Size(min = 60, max = 60)
         List<@Valid PlayerWarAttackTeamUpdateRequestDto> teams
 ) {
 }

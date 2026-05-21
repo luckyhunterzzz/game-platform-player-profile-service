@@ -1,7 +1,10 @@
 package com.gameplatform.playerprofileservice.domain.entity;
 
+import com.gameplatform.playerprofileservice.domain.enums.WarStatAttackResultType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -10,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,21 +23,25 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "team_war_attack")
-public class TeamWarAttack {
+@Table(name = "war_stat_attack_record")
+public class WarStatAttackRecord {
 
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "player_profile_id", nullable = false)
-    private UUID playerProfileId;
+    @Column(name = "team_id", nullable = false)
+    private UUID teamId;
 
     @Column(name = "war_mode_id", nullable = false)
     private UUID warModeId;
 
-    @Column(name = "team_index", nullable = false)
-    private Short teamIndex;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "result_type", nullable = false, length = 64)
+    private WarStatAttackResultType resultType;
+
+    @Column(name = "battle_date", nullable = false)
+    private LocalDate battleDate;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;

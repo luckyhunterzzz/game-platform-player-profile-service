@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface TeamWarAttackRepository extends JpaRepository<TeamWarAttack, UUID> {
 
-    List<TeamWarAttack> findAllByPlayerProfileIdOrderByTeamIndexAsc(UUID playerProfileId);
+    List<TeamWarAttack> findAllByPlayerProfileId(UUID playerProfileId);
 }
