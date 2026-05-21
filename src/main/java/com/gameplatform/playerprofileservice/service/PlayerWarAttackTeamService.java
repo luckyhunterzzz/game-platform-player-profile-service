@@ -4,12 +4,16 @@ import com.gameplatform.playerprofileservice.domain.entity.PlayerProfile;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttack;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttackHero;
+import com.gameplatform.playerprofileservice.domain.entity.WarMode;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackSlotUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.repository.PlayerProfileHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackRepository;
+import com.gameplatform.playerprofileservice.repository.WarModeRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,25 +48,34 @@ public class PlayerWarAttackTeamService {
     private final PlayerProfileHeroRepository playerProfileHeroRepository;
     private final TeamWarAttackRepository teamWarAttackRepository;
     private final TeamWarAttackHeroRepository teamWarAttackHeroRepository;
+    private final WarModeRepository warModeRepository;
+    private final ObjectMapper objectMapper;
     private final Clock clock;
 
     @Transactional
-    public List<WarAttackTeamView> getMyTeams(UUID userId, String email) {
+    public WarAttackTeamsView getMyTeams(UUID userId, String email) {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
-        List<TeamWarAttack> teams = getOrCreateTeams(playerProfile.getId());
-        return buildTeamViews(teams);
+        List<WarMode> warModes = getActiveWarModes();
+        List<TeamWarAttack> teams = getOrCreateTeams(playerProfile.getId(), warModes);
+        return buildTeamsView(warModes, teams);
     }
 
     @Transactional
-    public List<WarAttackTeamView> updateMyTeams(UUID userId,
-                                                 String email,
-                                                 PlayerWarAttackTeamsUpdateRequestDto request) {
+    public WarAttackTeamsView updateMyTeams(UUID userId,
+                                            String email,
+                                            PlayerWarAttackTeamsUpdateRequestDto request) {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
-        validateRequest(request);
+        List<WarMode> warModes = getActiveWarModes();
+        Map<String, WarMode> warModeByCode = warModes.stream()
+                .collect(Collectors.toMap(mode -> mode.getCode().toUpperCase(), Function.identity()));
+        validateRequest(request, warModeByCode.keySet());
 
-        List<TeamWarAttack> teams = getOrCreateTeams(playerProfile.getId());
-        Map<Integer, TeamWarAttack> teamByIndex = teams.stream()
-                .collect(Collectors.toMap(team -> (int) team.getTeamIndex(), Function.identity()));
+        List<TeamWarAttack> teams = getOrCreateTeams(playerProfile.getId(), warModes);
+        Map<String, TeamWarAttack> teamByModeAndIndex = teams.stream()
+                .collect(Collectors.toMap(
+                        team -> buildTeamKey(resolveWarModeCode(team.getWarModeId(), warModes), (int) team.getTeamIndex()),
+                        Function.identity()
+                ));
 
         Set<UUID> requestedProfileHeroIds = request.teams().stream()
                 .flatMap(team -> team.slots().stream())
@@ -82,7 +95,7 @@ public class PlayerWarAttackTeamService {
 
         List<TeamWarAttackHero> heroesToSave = new ArrayList<>();
         for (PlayerWarAttackTeamUpdateRequestDto requestTeam : request.teams()) {
-            TeamWarAttack team = teamByIndex.get(requestTeam.teamIndex());
+            TeamWarAttack team = teamByModeAndIndex.get(buildTeamKey(requestTeam.warModeCode(), requestTeam.teamIndex()));
             team.setUpdatedAt(now);
 
             for (PlayerWarAttackSlotUpdateRequestDto requestSlot : requestTeam.slots()) {
@@ -105,44 +118,48 @@ public class PlayerWarAttackTeamService {
             teamWarAttackHeroRepository.saveAll(heroesToSave);
         }
 
-        return buildTeamViews(teams, heroesToSave);
+        return buildTeamsView(warModes, teams, heroesToSave);
     }
 
-    protected List<TeamWarAttack> getOrCreateTeams(UUID playerProfileId) {
-        List<TeamWarAttack> existingTeams = teamWarAttackRepository.findAllByPlayerProfileIdOrderByTeamIndexAsc(playerProfileId);
-        if (existingTeams.size() == TEAM_COUNT) {
+    protected List<TeamWarAttack> getOrCreateTeams(UUID playerProfileId, List<WarMode> warModes) {
+        int expectedTeamCount = TEAM_COUNT * warModes.size();
+        List<TeamWarAttack> existingTeams = teamWarAttackRepository.findAllByPlayerProfileId(playerProfileId);
+        if (existingTeams.size() == expectedTeamCount) {
             return existingTeams;
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
-        Set<Short> existingIndexes = existingTeams.stream()
-                .map(TeamWarAttack::getTeamIndex)
+        Set<String> existingKeys = existingTeams.stream()
+                .map(team -> buildTeamKey(team.getWarModeId(), team.getTeamIndex()))
                 .collect(Collectors.toSet());
 
         List<TeamWarAttack> teamsToCreate = new ArrayList<>();
-        for (short teamIndex = 1; teamIndex <= TEAM_COUNT; teamIndex++) {
-            if (existingIndexes.contains(teamIndex)) {
-                continue;
-            }
+        for (WarMode warMode : warModes) {
+            for (short teamIndex = 1; teamIndex <= TEAM_COUNT; teamIndex++) {
+                if (existingKeys.contains(buildTeamKey(warMode.getId(), teamIndex))) {
+                    continue;
+                }
 
-            teamsToCreate.add(TeamWarAttack.builder()
-                    .id(UUID.randomUUID())
-                    .playerProfileId(playerProfileId)
-                    .teamIndex(teamIndex)
-                    .createdAt(now)
-                    .updatedAt(now)
-                    .build());
+                teamsToCreate.add(TeamWarAttack.builder()
+                        .id(UUID.randomUUID())
+                        .playerProfileId(playerProfileId)
+                        .warModeId(warMode.getId())
+                        .teamIndex(teamIndex)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build());
+            }
         }
 
         if (!teamsToCreate.isEmpty()) {
             teamWarAttackRepository.saveAll(teamsToCreate);
-            existingTeams = teamWarAttackRepository.findAllByPlayerProfileIdOrderByTeamIndexAsc(playerProfileId);
+            existingTeams = teamWarAttackRepository.findAllByPlayerProfileId(playerProfileId);
         }
 
         return existingTeams;
     }
 
-    private List<WarAttackTeamView> buildTeamViews(List<TeamWarAttack> teams) {
+    private WarAttackTeamsView buildTeamsView(List<WarMode> warModes, List<TeamWarAttack> teams) {
         List<UUID> teamIds = teams.stream()
                 .map(TeamWarAttack::getId)
                 .toList();
@@ -151,12 +168,15 @@ public class PlayerWarAttackTeamService {
                 ? List.of()
                 : teamWarAttackHeroRepository.findAllByTeamWarAttackIdIn(teamIds);
 
-        return buildTeamViews(teams, teamHeroes);
+        return buildTeamsView(warModes, teams, teamHeroes);
     }
 
-    private List<WarAttackTeamView> buildTeamViews(List<TeamWarAttack> teams,
-                                                   List<TeamWarAttackHero> teamHeroes) {
+    private WarAttackTeamsView buildTeamsView(List<WarMode> warModes,
+                                              List<TeamWarAttack> teams,
+                                              List<TeamWarAttackHero> teamHeroes) {
         Map<UUID, Map<Short, UUID>> heroByTeamAndSlot = new HashMap<>();
+        Map<UUID, WarMode> warModeById = warModes.stream()
+                .collect(Collectors.toMap(WarMode::getId, Function.identity()));
 
         for (TeamWarAttackHero teamHero : teamHeroes) {
             heroByTeamAndSlot
@@ -164,8 +184,14 @@ public class PlayerWarAttackTeamService {
                     .put(teamHero.getSlot(), teamHero.getPlayerProfileHeroId());
         }
 
-        return teams.stream()
-                .sorted(Comparator.comparing(TeamWarAttack::getTeamIndex))
+        List<WarModeView> warModeViews = warModes.stream()
+                .map(this::toWarModeView)
+                .toList();
+
+        List<WarAttackTeamView> teamViews = teams.stream()
+                .sorted(Comparator
+                        .comparing((TeamWarAttack team) -> warModeById.get(team.getWarModeId()).getSortOrder())
+                        .thenComparing(TeamWarAttack::getTeamIndex))
                 .map(team -> {
                     Map<Short, UUID> slotMap = heroByTeamAndSlot.getOrDefault(team.getId(), Map.of());
                     List<WarAttackSlotView> slots = new ArrayList<>(TEAM_SIZE);
@@ -178,20 +204,31 @@ public class PlayerWarAttackTeamService {
 
                     return WarAttackTeamView.builder()
                             .id(team.getId())
+                            .warModeCode(warModeById.get(team.getWarModeId()).getCode())
                             .teamIndex((int) team.getTeamIndex())
                             .slots(slots)
                             .build();
                 })
                 .toList();
+
+        return WarAttackTeamsView.builder()
+                .warModes(warModeViews)
+                .teams(teamViews)
+                .build();
     }
 
-    private void validateRequest(PlayerWarAttackTeamsUpdateRequestDto request) {
-        Set<Integer> teamIndexes = new HashSet<>();
-        Set<UUID> usedProfileHeroIds = new HashSet<>();
+    private void validateRequest(PlayerWarAttackTeamsUpdateRequestDto request, Set<String> allowedWarModeCodes) {
+        Map<String, Set<Integer>> teamIndexesByMode = new HashMap<>();
+        Map<String, Set<UUID>> usedProfileHeroIdsByMode = new HashMap<>();
 
         for (PlayerWarAttackTeamUpdateRequestDto team : request.teams()) {
-            if (!teamIndexes.add(team.teamIndex())) {
-                throw new ResponseStatusException(BAD_REQUEST, "Duplicate team index: " + team.teamIndex());
+            String warModeCode = normalizeModeCode(team.warModeCode());
+            if (!allowedWarModeCodes.contains(warModeCode)) {
+                throw new ResponseStatusException(BAD_REQUEST, "Unknown war mode code: " + team.warModeCode());
+            }
+
+            if (!teamIndexesByMode.computeIfAbsent(warModeCode, ignored -> new HashSet<>()).add(team.teamIndex())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Duplicate team index for war mode " + warModeCode + ": " + team.teamIndex());
             }
 
             Set<Integer> slots = new HashSet<>();
@@ -204,20 +241,75 @@ public class PlayerWarAttackTeamService {
                 }
 
                 UUID playerProfileHeroId = slot.playerProfileHeroId();
-                if (playerProfileHeroId != null && !usedProfileHeroIds.add(playerProfileHeroId)) {
+                if (playerProfileHeroId != null
+                        && !usedProfileHeroIdsByMode.computeIfAbsent(warModeCode, ignored -> new HashSet<>()).add(playerProfileHeroId)) {
                     throw new ResponseStatusException(
                             BAD_REQUEST,
-                            "Profile hero is already used in another war team: " + playerProfileHeroId
+                            "Profile hero is already used in another war team for mode " + warModeCode + ": " + playerProfileHeroId
                     );
                 }
             }
         }
 
-        for (int teamIndex = 1; teamIndex <= TEAM_COUNT; teamIndex++) {
-            if (!teamIndexes.contains(teamIndex)) {
-                throw new ResponseStatusException(BAD_REQUEST, "Missing team index: " + teamIndex);
+        for (String warModeCode : allowedWarModeCodes) {
+            Set<Integer> modeTeamIndexes = teamIndexesByMode.getOrDefault(warModeCode, Set.of());
+            for (int teamIndex = 1; teamIndex <= TEAM_COUNT; teamIndex++) {
+                if (!modeTeamIndexes.contains(teamIndex)) {
+                    throw new ResponseStatusException(BAD_REQUEST, "Missing team index " + teamIndex + " for war mode " + warModeCode);
+                }
             }
         }
+    }
+
+    private List<WarMode> getActiveWarModes() {
+        List<WarMode> warModes = warModeRepository.findAllByActiveTrueOrderBySortOrderAsc();
+        if (warModes.isEmpty()) {
+            throw new ResponseStatusException(BAD_REQUEST, "No active war modes configured");
+        }
+        return warModes;
+    }
+
+    private WarModeView toWarModeView(WarMode warMode) {
+        Map<String, String> names = parseLocalizedJson(warMode.getNameJson());
+        Map<String, String> descriptions = parseLocalizedJson(warMode.getDescriptionJson());
+
+        return WarModeView.builder()
+                .code(warMode.getCode())
+                .nameRu(names.getOrDefault("ru", warMode.getCode()))
+                .nameEn(names.getOrDefault("en", warMode.getCode()))
+                .descriptionRu(descriptions.getOrDefault("ru", ""))
+                .descriptionEn(descriptions.getOrDefault("en", ""))
+                .sortOrder((int) warMode.getSortOrder())
+                .build();
+    }
+
+    private Map<String, String> parseLocalizedJson(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {
+            });
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to parse war mode localization JSON", exception);
+        }
+    }
+
+    private String resolveWarModeCode(UUID warModeId, List<WarMode> warModes) {
+        return warModes.stream()
+                .filter(warMode -> warMode.getId().equals(warModeId))
+                .map(WarMode::getCode)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Unknown war mode id: " + warModeId));
+    }
+
+    private String normalizeModeCode(String warModeCode) {
+        return warModeCode.trim().toUpperCase();
+    }
+
+    private String buildTeamKey(String warModeCode, int teamIndex) {
+        return normalizeModeCode(warModeCode) + ":" + teamIndex;
+    }
+
+    private String buildTeamKey(UUID warModeId, short teamIndex) {
+        return warModeId + ":" + teamIndex;
     }
 
     private void validateProfileHeroOwnership(UUID playerProfileId, Set<UUID> requestedProfileHeroIds) {
@@ -246,10 +338,29 @@ public class PlayerWarAttackTeamService {
     }
 
     @Builder
+    public record WarModeView(
+            String code,
+            String nameRu,
+            String nameEn,
+            String descriptionRu,
+            String descriptionEn,
+            Integer sortOrder
+    ) {
+    }
+
+    @Builder
     public record WarAttackTeamView(
             UUID id,
+            String warModeCode,
             Integer teamIndex,
             List<WarAttackSlotView> slots
+    ) {
+    }
+
+    @Builder
+    public record WarAttackTeamsView(
+            List<WarModeView> warModes,
+            List<WarAttackTeamView> teams
     ) {
     }
 }

@@ -8,6 +8,7 @@ import java.util.UUID;
 @Builder
 public record PlayerWarAttackTeamResponseDto(
         UUID id,
+        String warModeCode,
         Integer teamIndex,
         List<PlayerWarAttackSlotResponseDto> slots
 ) {
