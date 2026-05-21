@@ -176,7 +176,16 @@ public class PlayerWarStatAttackTeamService {
 
         validateSlotsRequest(playerProfile.getId(), request);
 
+        List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
+        ensureNoDuplicateComposition(
+                playerProfile.getId(),
+                team.getId(),
+                buildOrderedProfileHeroIds(request.slots()),
+                existingTeams
+        );
+
         warStatAttackTeamSlotRepository.deleteAllByTeamId(team.getId());
+        warStatAttackTeamSlotRepository.flush();
 
         OffsetDateTime now = OffsetDateTime.now(clock);
         List<WarStatAttackTeamSlot> slotsToSave = request.slots().stream()
@@ -193,14 +202,6 @@ public class PlayerWarStatAttackTeamService {
         if (!slotsToSave.isEmpty()) {
             warStatAttackTeamSlotRepository.saveAll(slotsToSave);
         }
-
-        List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
-        ensureNoDuplicateComposition(
-                playerProfile.getId(),
-                team.getId(),
-                buildOrderedProfileHeroIds(request.slots()),
-                existingTeams
-        );
 
         team.setName(request.name().trim());
         team.setUpdatedAt(now);
