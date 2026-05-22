@@ -49,7 +49,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional(readOnly = true)
 public class PlayerWarStatAttackTeamService {
 
-    private static final int DEFAULT_TEAM_COUNT = 6;
     private static final int TEAM_SIZE = 5;
 
     private final PlayerProfileService playerProfileService;
@@ -67,7 +66,7 @@ public class PlayerWarStatAttackTeamService {
     public WarStatAttackTeamsView getMyTeams(UUID userId, String email) {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
-        List<WarStatAttackTeam> teams = getOrCreateDefaultTeams(playerProfile.getId());
+        List<WarStatAttackTeam> teams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
         return buildTeamsView(warModes, teams);
     }
 
@@ -75,7 +74,7 @@ public class PlayerWarStatAttackTeamService {
     public WarStatAttackTeamsView createTeam(UUID userId, String email) {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
-        List<WarStatAttackTeam> existingTeams = getOrCreateDefaultTeams(playerProfile.getId());
+        List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
 
         int nextOrder = existingTeams.stream()
                 .map(WarStatAttackTeam::getTeamOrder)
@@ -123,7 +122,7 @@ public class PlayerWarStatAttackTeamService {
             throw new ResponseStatusException(BAD_REQUEST, "Cannot import an empty war team");
         }
 
-        List<WarStatAttackTeam> existingStatTeams = getOrCreateDefaultTeams(playerProfile.getId());
+        List<WarStatAttackTeam> existingStatTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
         ensureNoDuplicateComposition(playerProfile.getId(), null, importedProfileHeroIds, existingStatTeams);
 
         int nextOrder = existingStatTeams.stream()
@@ -287,28 +286,6 @@ public class PlayerWarStatAttackTeamService {
         warStatAttackTeamRepository.save(team);
 
         return buildTeamsView(warModes, warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId()));
-    }
-
-    private List<WarStatAttackTeam> getOrCreateDefaultTeams(UUID playerProfileId) {
-        List<WarStatAttackTeam> teams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfileId);
-        if (!teams.isEmpty()) {
-            return teams;
-        }
-
-        OffsetDateTime now = OffsetDateTime.now(clock);
-        List<WarStatAttackTeam> defaultTeams = new ArrayList<>();
-        for (int teamOrder = 1; teamOrder <= DEFAULT_TEAM_COUNT; teamOrder++) {
-            defaultTeams.add(WarStatAttackTeam.builder()
-                    .id(UUID.randomUUID())
-                    .playerProfileId(playerProfileId)
-                    .name("Team " + teamOrder)
-                    .teamOrder(teamOrder)
-                    .createdAt(now)
-                    .updatedAt(now)
-                    .build());
-        }
-
-        return warStatAttackTeamRepository.saveAll(defaultTeams);
     }
 
     private WarStatAttackTeamsView buildTeamsView(List<WarMode> warModes, List<WarStatAttackTeam> teams) {
