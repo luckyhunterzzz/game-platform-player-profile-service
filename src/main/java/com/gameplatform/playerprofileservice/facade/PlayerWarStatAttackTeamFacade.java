@@ -3,11 +3,14 @@ package com.gameplatform.playerprofileservice.facade;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackImportRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackRecordUpsertRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamUpdateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamsReorderRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatTeamTagsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarModeResponseDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackRecordResponseDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTeamResponseDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTeamSlotResponseDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTeamsResponseDto;
+import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatTeamTagResponseDto;
 import com.gameplatform.playerprofileservice.service.PlayerWarStatAttackTeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -39,6 +42,19 @@ public class PlayerWarStatAttackTeamFacade {
                                                           UUID teamId,
                                                           PlayerWarStatAttackTeamUpdateRequestDto request) {
         return toResponse(playerWarStatAttackTeamService.updateTeam(userId, email, teamId, request));
+    }
+
+    public PlayerWarStatAttackTeamsResponseDto updateTeamTags(UUID userId,
+                                                              String email,
+                                                              UUID teamId,
+                                                              PlayerWarStatTeamTagsUpdateRequestDto request) {
+        return toResponse(playerWarStatAttackTeamService.updateTeamTags(userId, email, teamId, request));
+    }
+
+    public PlayerWarStatAttackTeamsResponseDto reorderTeams(UUID userId,
+                                                            String email,
+                                                            PlayerWarStatAttackTeamsReorderRequestDto request) {
+        return toResponse(playerWarStatAttackTeamService.reorderTeams(userId, email, request));
     }
 
     public PlayerWarStatAttackTeamsResponseDto deleteTeam(UUID userId, String email, UUID teamId) {
@@ -93,6 +109,17 @@ public class PlayerWarStatAttackTeamFacade {
                                                 .warModeCode(record.warModeCode())
                                                 .resultType(record.resultType())
                                                 .battleDate(record.battleDate())
+                                                .build())
+                                        .toList())
+                                .tags(team.tags().stream()
+                                        .map(tag -> PlayerWarStatTeamTagResponseDto.builder()
+                                                .id(tag.id())
+                                                .scopeType(tag.scopeType())
+                                                .category(tag.category())
+                                                .code(tag.code())
+                                                .name(tag.name())
+                                                .iconKey(tag.iconKey())
+                                                .imageUrl(tag.imageUrl())
                                                 .build())
                                         .toList())
                                 .build())
