@@ -11,6 +11,7 @@ public record PlayerWarStatAttackTeamResponseDto(
         String name,
         Integer teamOrder,
         List<PlayerWarStatAttackTeamSlotResponseDto> slots,
-        List<PlayerWarStatAttackRecordResponseDto> records
+        List<PlayerWarStatAttackRecordResponseDto> records,
+        List<PlayerWarStatTeamTagResponseDto> tags
 ) {
 }

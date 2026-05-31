@@ -3,6 +3,8 @@ package com.gameplatform.playerprofileservice.controller;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackImportRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackRecordUpsertRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamUpdateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamsReorderRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatTeamTagsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTeamsResponseDto;
 import com.gameplatform.playerprofileservice.facade.PlayerWarStatAttackTeamFacade;
 import com.gameplatform.playerprofileservice.utility.HeaderNames;
@@ -63,6 +65,25 @@ public class PlayerWarStatAttackTeamController {
             @RequestBody @Valid PlayerWarStatAttackTeamUpdateRequestDto request
     ) {
         return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeam(userId, email, teamId, request));
+    }
+
+    @PutMapping("/{teamId}/tags")
+    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> updateTeamTags(
+            @RequestHeader(HeaderNames.USER_ID) UUID userId,
+            @RequestHeader(HeaderNames.USER_EMAIL) String email,
+            @PathVariable UUID teamId,
+            @RequestBody @Valid PlayerWarStatTeamTagsUpdateRequestDto request
+    ) {
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeamTags(userId, email, teamId, request));
+    }
+
+    @PutMapping("/order")
+    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> reorderTeams(
+            @RequestHeader(HeaderNames.USER_ID) UUID userId,
+            @RequestHeader(HeaderNames.USER_EMAIL) String email,
+            @RequestBody @Valid PlayerWarStatAttackTeamsReorderRequestDto request
+    ) {
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.reorderTeams(userId, email, request));
     }
 
     @DeleteMapping("/{teamId}")
