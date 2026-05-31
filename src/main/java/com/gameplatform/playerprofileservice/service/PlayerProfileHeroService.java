@@ -30,15 +30,16 @@ public class PlayerProfileHeroService {
     }
 
     @Transactional
-    public PlayerProfileHero addHero(UUID userId, String email, Long heroId) {
+    public PlayerProfileHero addHero(UUID userId, String email, Long heroId, HeroPowerGrade powerGrade) {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
         OffsetDateTime now = OffsetDateTime.now(clock);
+        HeroPowerGrade resolvedPowerGrade = powerGrade != null ? powerGrade : HeroPowerGrade.FULLY_ASCENDED;
 
         PlayerProfileHero playerProfileHero = PlayerProfileHero.builder()
                 .id(UUID.randomUUID())
                 .playerProfileId(playerProfile.getId())
                 .heroId(heroId)
-                .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
+                .powerGrade(resolvedPowerGrade)
                 .talentLevel(0)
                 .createdAt(now)
                 .build();
