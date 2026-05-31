@@ -10,10 +10,15 @@ import com.gameplatform.playerprofileservice.domain.entity.WarStatAttackTeam;
 import com.gameplatform.playerprofileservice.domain.entity.WarStatAttackTeamSlot;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttack;
 import com.gameplatform.playerprofileservice.domain.entity.TeamWarAttackHero;
+import com.gameplatform.playerprofileservice.domain.entity.WarStatAttackTeamTagLink;
+import com.gameplatform.playerprofileservice.domain.entity.WarStatTeamTag;
+import com.gameplatform.playerprofileservice.domain.enums.WarStatTeamTagCategory;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackImportRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackRecordUpsertRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamSlotUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamUpdateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamsReorderRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatTeamTagsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.repository.PlayerProfileHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackHeroRepository;
 import com.gameplatform.playerprofileservice.repository.TeamWarAttackRepository;
@@ -21,6 +26,8 @@ import com.gameplatform.playerprofileservice.repository.WarModeRepository;
 import com.gameplatform.playerprofileservice.repository.WarStatAttackRecordRepository;
 import com.gameplatform.playerprofileservice.repository.WarStatAttackTeamRepository;
 import com.gameplatform.playerprofileservice.repository.WarStatAttackTeamSlotRepository;
+import com.gameplatform.playerprofileservice.repository.WarStatAttackTeamTagLinkRepository;
+import com.gameplatform.playerprofileservice.repository.WarStatTeamTagRepository;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -59,6 +66,9 @@ public class PlayerWarStatAttackTeamService {
     private final WarStatAttackTeamSlotRepository warStatAttackTeamSlotRepository;
     private final WarStatAttackRecordRepository warStatAttackRecordRepository;
     private final WarModeRepository warModeRepository;
+    private final WarStatTeamTagRepository warStatTeamTagRepository;
+    private final WarStatAttackTeamTagLinkRepository warStatAttackTeamTagLinkRepository;
+    private final PlayerWarStatTeamTagService playerWarStatTeamTagService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -160,6 +170,8 @@ public class PlayerWarStatAttackTeamService {
             warStatAttackTeamSlotRepository.saveAll(slotsToSave);
         }
 
+        attachSystemWarModeTag(createdTeam.getId(), requestedWarMode.getCode(), now);
+
         return buildTeamsView(statisticWarModes, warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId()));
     }
 
@@ -171,40 +183,133 @@ public class PlayerWarStatAttackTeamService {
         PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
-        ensureTeamIsEditable(team);
+        boolean teamLocked = warStatAttackRecordRepository.existsByTeamId(team.getId());
 
         validateSlotsRequest(playerProfile.getId(), request);
 
+        List<WarStatAttackTeamSlot> existingSlots = warStatAttackTeamSlotRepository.findAllByTeamId(team.getId());
+        if (teamLocked && hasSlotChanges(existingSlots, request.slots())) {
+            throw new ResponseStatusException(BAD_REQUEST, "War statistic team heroes are locked after first battle record");
+        }
+
         List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
-        ensureNoDuplicateComposition(
-                playerProfile.getId(),
-                team.getId(),
-                buildOrderedProfileHeroIds(request.slots()),
-                existingTeams
-        );
-
-        warStatAttackTeamSlotRepository.deleteAllByTeamId(team.getId());
-        warStatAttackTeamSlotRepository.flush();
-
         OffsetDateTime now = OffsetDateTime.now(clock);
-        List<WarStatAttackTeamSlot> slotsToSave = request.slots().stream()
-                .filter(slot -> slot.playerProfileHeroId() != null)
-                .map(slot -> WarStatAttackTeamSlot.builder()
-                        .id(UUID.randomUUID())
-                        .teamId(team.getId())
-                        .slot(slot.slot().shortValue())
-                        .playerProfileHeroId(slot.playerProfileHeroId())
-                        .createdAt(now)
-                        .build())
-                .toList();
 
-        if (!slotsToSave.isEmpty()) {
-            warStatAttackTeamSlotRepository.saveAll(slotsToSave);
+        if (!teamLocked) {
+            ensureNoDuplicateComposition(
+                    playerProfile.getId(),
+                    team.getId(),
+                    buildOrderedProfileHeroIds(request.slots()),
+                    existingTeams
+            );
+
+            warStatAttackTeamSlotRepository.deleteAllByTeamId(team.getId());
+            warStatAttackTeamSlotRepository.flush();
+
+            List<WarStatAttackTeamSlot> slotsToSave = request.slots().stream()
+                    .filter(slot -> slot.playerProfileHeroId() != null)
+                    .map(slot -> WarStatAttackTeamSlot.builder()
+                            .id(UUID.randomUUID())
+                            .teamId(team.getId())
+                            .slot(slot.slot().shortValue())
+                            .playerProfileHeroId(slot.playerProfileHeroId())
+                            .createdAt(now)
+                            .build())
+                    .toList();
+
+            if (!slotsToSave.isEmpty()) {
+                warStatAttackTeamSlotRepository.saveAll(slotsToSave);
+            }
         }
 
         team.setName(request.name().trim());
         team.setUpdatedAt(now);
         warStatAttackTeamRepository.save(team);
+
+        return buildTeamsView(warModes, warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId()));
+    }
+
+    @Transactional
+    public WarStatAttackTeamsView updateTeamTags(UUID userId,
+                                                 String email,
+                                                 UUID teamId,
+                                                 PlayerWarStatTeamTagsUpdateRequestDto request) {
+        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        List<WarMode> warModes = getStatisticWarModes();
+        WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
+
+        validateAssignedTags(playerProfile.getId(), request.tagIds());
+
+        warStatAttackTeamTagLinkRepository.deleteAllByTeamId(team.getId());
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        List<WarStatAttackTeamTagLink> linksToSave = request.tagIds().stream()
+                .distinct()
+                .map(tagId -> WarStatAttackTeamTagLink.builder()
+                        .id(UUID.randomUUID())
+                        .teamId(team.getId())
+                        .tagId(tagId)
+                        .createdAt(now)
+                        .build())
+                .toList();
+        if (!linksToSave.isEmpty()) {
+            warStatAttackTeamTagLinkRepository.saveAll(linksToSave);
+        }
+
+        team.setUpdatedAt(now);
+        warStatAttackTeamRepository.save(team);
+
+        return buildTeamsView(warModes, warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId()));
+    }
+
+    @Transactional
+    public WarStatAttackTeamsView reorderTeams(UUID userId,
+                                               String email,
+                                               PlayerWarStatAttackTeamsReorderRequestDto request) {
+        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        List<WarMode> warModes = getStatisticWarModes();
+        List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
+
+        if (request.teamIds().size() != existingTeams.size()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Team ids count does not match existing teams count");
+        }
+
+        Set<UUID> uniqueTeamIds = new HashSet<>(request.teamIds());
+        if (uniqueTeamIds.size() != request.teamIds().size()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Duplicate team ids are not allowed");
+        }
+
+        Map<UUID, WarStatAttackTeam> teamById = existingTeams.stream()
+                .collect(Collectors.toMap(WarStatAttackTeam::getId, Function.identity()));
+
+        List<WarStatAttackTeam> reorderedTeams = new ArrayList<>(request.teamIds().size());
+        for (UUID teamId : request.teamIds()) {
+            WarStatAttackTeam team = teamById.get(teamId);
+            if (team == null) {
+                throw new ResponseStatusException(BAD_REQUEST, "War statistic team not found: " + teamId);
+            }
+            reorderedTeams.add(team);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        int temporaryOrderBase = existingTeams.stream()
+                .map(WarStatAttackTeam::getTeamOrder)
+                .max(Integer::compareTo)
+                .orElse(0) + reorderedTeams.size();
+        for (int index = 0; index < reorderedTeams.size(); index++) {
+            WarStatAttackTeam team = reorderedTeams.get(index);
+            team.setTeamOrder(temporaryOrderBase + index + 1);
+            team.setUpdatedAt(now);
+        }
+
+        warStatAttackTeamRepository.saveAllAndFlush(reorderedTeams);
+
+        for (int index = 0; index < reorderedTeams.size(); index++) {
+            WarStatAttackTeam team = reorderedTeams.get(index);
+            team.setTeamOrder(index + 1);
+            team.setUpdatedAt(now);
+        }
+
+        warStatAttackTeamRepository.saveAll(reorderedTeams);
 
         return buildTeamsView(warModes, warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId()));
     }
@@ -300,6 +405,15 @@ public class PlayerWarStatAttackTeamService {
         List<WarStatAttackRecord> records = teamIds.isEmpty()
                 ? List.of()
                 : warStatAttackRecordRepository.findAllByTeamIdIn(teamIds);
+        List<WarStatAttackTeamTagLink> tagLinks = teamIds.isEmpty()
+                ? List.of()
+                : warStatAttackTeamTagLinkRepository.findAllByTeamIdIn(teamIds);
+        List<WarStatTeamTag> tags = tagLinks.isEmpty()
+                ? List.of()
+                : warStatTeamTagRepository.findAllByIdIn(tagLinks.stream()
+                .map(WarStatAttackTeamTagLink::getTagId)
+                .distinct()
+                .toList());
 
         Map<UUID, Map<Short, UUID>> heroByTeamAndSlot = new HashMap<>();
         for (WarStatAttackTeamSlot teamSlot : teamSlots) {
@@ -310,6 +424,16 @@ public class PlayerWarStatAttackTeamService {
 
         Map<UUID, List<WarStatAttackRecord>> recordsByTeam = records.stream()
                 .collect(Collectors.groupingBy(WarStatAttackRecord::getTeamId));
+        Map<UUID, WarStatTeamTag> tagById = tags.stream()
+                .collect(Collectors.toMap(WarStatTeamTag::getId, Function.identity()));
+        Map<UUID, List<WarStatTeamTag>> tagsByTeamId = new HashMap<>();
+        for (WarStatAttackTeamTagLink tagLink : tagLinks) {
+            WarStatTeamTag tag = tagById.get(tagLink.getTagId());
+            if (tag == null) {
+                continue;
+            }
+            tagsByTeamId.computeIfAbsent(tagLink.getTeamId(), ignored -> new ArrayList<>()).add(tag);
+        }
 
         Map<UUID, WarMode> warModeById = warModes.stream()
                 .collect(Collectors.toMap(WarMode::getId, Function.identity()));
@@ -351,6 +475,14 @@ public class PlayerWarStatAttackTeamService {
                             .teamOrder(team.getTeamOrder())
                             .slots(slots)
                             .records(recordViews)
+                            .tags(tagsByTeamId.getOrDefault(team.getId(), List.of()).stream()
+                                    .sorted(Comparator
+                                            .comparing((WarStatTeamTag tag) -> tag.getScopeType().name())
+                                            .thenComparing(WarStatTeamTag::getCategory)
+                                            .thenComparing(tag -> tag.getCode() == null ? "" : tag.getCode())
+                                            .thenComparing(WarStatTeamTag::getName, String.CASE_INSENSITIVE_ORDER))
+                                    .map(this::toTagView)
+                                    .toList())
                             .build();
                 })
                 .toList();
@@ -469,15 +601,42 @@ public class PlayerWarStatAttackTeamService {
         }
     }
 
+    private boolean hasSlotChanges(List<WarStatAttackTeamSlot> existingSlots,
+                                   List<PlayerWarStatAttackTeamSlotUpdateRequestDto> requestedSlots) {
+        Map<Short, UUID> existingSlotMap = existingSlots.stream()
+                .collect(Collectors.toMap(WarStatAttackTeamSlot::getSlot, WarStatAttackTeamSlot::getPlayerProfileHeroId));
+
+        for (PlayerWarStatAttackTeamSlotUpdateRequestDto requestedSlot : requestedSlots) {
+            UUID existingHeroId = existingSlotMap.get(requestedSlot.slot().shortValue());
+            UUID requestedHeroId = requestedSlot.playerProfileHeroId();
+            if (!java.util.Objects.equals(existingHeroId, requestedHeroId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void validateAssignedTags(UUID playerProfileId, List<UUID> tagIds) {
+        List<UUID> distinctTagIds = tagIds.stream().distinct().toList();
+        if (distinctTagIds.size() > PlayerWarStatTeamTagService.TEAM_TAG_LIMIT) {
+            throw new ResponseStatusException(BAD_REQUEST, "Too many tags assigned to war statistic team");
+        }
+
+        List<WarStatTeamTag> availableTags = playerWarStatTeamTagService.loadAvailableTags(playerProfileId);
+        Set<UUID> availableTagIds = availableTags.stream()
+                .map(WarStatTeamTag::getId)
+                .collect(Collectors.toSet());
+
+        boolean hasForeignTag = distinctTagIds.stream().anyMatch(tagId -> !availableTagIds.contains(tagId));
+        if (hasForeignTag) {
+            throw new ResponseStatusException(BAD_REQUEST, "Some tags do not belong to current profile");
+        }
+    }
+
     private WarStatAttackTeam getTeamOrThrow(UUID playerProfileId, UUID teamId) {
         return warStatAttackTeamRepository.findByIdAndPlayerProfileId(teamId, playerProfileId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "War statistic team not found"));
-    }
-
-    private void ensureTeamIsEditable(WarStatAttackTeam team) {
-        if (warStatAttackRecordRepository.existsByTeamId(team.getId())) {
-            throw new ResponseStatusException(BAD_REQUEST, "War statistic team is locked after first battle record");
-        }
     }
 
     private void ensureTeamHasHeroes(UUID teamId) {
@@ -486,6 +645,16 @@ public class PlayerWarStatAttackTeamService {
         if (!hasAnyHero) {
             throw new ResponseStatusException(BAD_REQUEST, "Cannot create record for empty war statistic team");
         }
+    }
+
+    private void attachSystemWarModeTag(UUID teamId, String warModeCode, OffsetDateTime createdAt) {
+        WarStatTeamTag warModeTag = playerWarStatTeamTagService.findSystemTagOrThrow(WarStatTeamTagCategory.WAR_MODE, warModeCode);
+        warStatAttackTeamTagLinkRepository.save(WarStatAttackTeamTagLink.builder()
+                .id(UUID.randomUUID())
+                .teamId(teamId)
+                .tagId(warModeTag.getId())
+                .createdAt(createdAt)
+                .build());
     }
 
     private List<WarMode> getActiveWarModes() {
@@ -564,13 +733,38 @@ public class PlayerWarStatAttackTeamService {
     ) {
     }
 
+    private WarStatTeamTagView toTagView(WarStatTeamTag tag) {
+        return WarStatTeamTagView.builder()
+                .id(tag.getId())
+                .scopeType(tag.getScopeType().name())
+                .category(tag.getCategory().name())
+                .code(tag.getCode())
+                .name(tag.getName())
+                .iconKey(tag.getIconKey())
+                .imageUrl(tag.getImageUrl())
+                .build();
+    }
+
+    @Builder
+    public record WarStatTeamTagView(
+            UUID id,
+            String scopeType,
+            String category,
+            String code,
+            String name,
+            String iconKey,
+            String imageUrl
+    ) {
+    }
+
     @Builder
     public record WarStatAttackTeamView(
             UUID id,
             String name,
             Integer teamOrder,
             List<WarStatAttackSlotView> slots,
-            List<WarStatAttackRecordView> records
+            List<WarStatAttackRecordView> records,
+            List<WarStatTeamTagView> tags
     ) {
     }
 
