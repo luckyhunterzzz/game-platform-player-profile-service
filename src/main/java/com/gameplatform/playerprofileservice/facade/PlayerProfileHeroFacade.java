@@ -29,7 +29,12 @@ public class PlayerProfileHeroFacade {
     public PlayerProfileHeroResponseDto addHero(UUID userId,
                                                 String email,
                                                 PlayerProfileHeroCreateRequestDto request) {
-        PlayerProfileHero playerProfileHero = playerProfileHeroService.addHero(userId, email, request.heroId());
+        PlayerProfileHero playerProfileHero = playerProfileHeroService.addHero(
+                userId,
+                email,
+                request.heroId(),
+                request.powerGrade()
+        );
         return playerProfileHeroResponseConverter.toResponse(playerProfileHero);
     }
 

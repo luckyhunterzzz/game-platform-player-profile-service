@@ -79,8 +79,8 @@ class PlayerProfileHeroServiceTest {
         when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        PlayerProfileHero firstResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L);
-        PlayerProfileHero secondResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L);
+        PlayerProfileHero firstResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null);
+        PlayerProfileHero secondResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null);
 
         assertEquals(101L, firstResult.getHeroId());
         assertEquals(101L, secondResult.getHeroId());
@@ -90,6 +90,27 @@ class PlayerProfileHeroServiceTest {
         assertEquals(HeroPowerGrade.FULLY_ASCENDED, secondResult.getPowerGrade());
         assertEquals(0, firstResult.getTalentLevel());
         assertEquals(0, secondResult.getTalentLevel());
+    }
+
+    @Test
+    void shouldUseProvidedPowerGradeWhenAddingHero() {
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        PlayerProfile playerProfile = buildProfile(profileId, userId);
+
+        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlayerProfileHero result = playerProfileHeroService.addHero(
+                userId,
+                "user@example.com",
+                303L,
+                HeroPowerGrade.FIRST_TIER
+        );
+
+        assertEquals(303L, result.getHeroId());
+        assertEquals(HeroPowerGrade.FIRST_TIER, result.getPowerGrade());
+        assertEquals(0, result.getTalentLevel());
     }
 
     @Test
