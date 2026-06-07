@@ -60,7 +60,7 @@ class PlayerProfileHeroServiceTest {
                 buildProfileHero(profileId, 202L)
         );
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.findAllByPlayerProfileIdOrderByCreatedAtAsc(profileId)).thenReturn(heroes);
 
         List<PlayerProfileHero> result = playerProfileHeroService.getMyHeroes(userId, "user@example.com");
@@ -76,7 +76,7 @@ class PlayerProfileHeroServiceTest {
         UUID profileId = UUID.randomUUID();
         PlayerProfile playerProfile = buildProfile(profileId, userId);
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         PlayerProfileHero firstResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null);
@@ -98,7 +98,7 @@ class PlayerProfileHeroServiceTest {
         UUID profileId = UUID.randomUUID();
         PlayerProfile playerProfile = buildProfile(profileId, userId);
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         PlayerProfileHero result = playerProfileHeroService.addHero(
@@ -128,7 +128,7 @@ class PlayerProfileHeroServiceTest {
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
                 .thenReturn(Optional.of(playerProfileHero));
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -160,7 +160,7 @@ class PlayerProfileHeroServiceTest {
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
                 .thenReturn(Optional.of(playerProfileHero));
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -192,7 +192,7 @@ class PlayerProfileHeroServiceTest {
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
                 .thenReturn(Optional.of(playerProfileHero));
 
@@ -209,7 +209,7 @@ class PlayerProfileHeroServiceTest {
 
         PlayerProfile playerProfile = buildProfile(profileId, userId);
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
                 .thenReturn(Optional.empty());
 

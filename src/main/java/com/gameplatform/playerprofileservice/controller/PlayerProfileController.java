@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -25,12 +26,21 @@ public class PlayerProfileController {
 
     private final PlayerProfileFacade playerProfileFacade;
 
+    @PostMapping("/me/init")
+    public ResponseEntity<PlayerProfileResponseDto> initializeMyProfile(
+            @RequestHeader(HeaderNames.USER_ID) UUID userId,
+            @RequestHeader(HeaderNames.USER_EMAIL) String email
+    ) {
+        PlayerProfileResponseDto response = playerProfileFacade.initializeMyProfile(userId, email);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/me")
     public ResponseEntity<PlayerProfileResponseDto> getMyProfile(
             @RequestHeader(HeaderNames.USER_ID) UUID userId,
             @RequestHeader(HeaderNames.USER_EMAIL) String email
     ) {
-        PlayerProfileResponseDto response = playerProfileFacade.getOrCreateMyProfile(userId, email);
+        PlayerProfileResponseDto response = playerProfileFacade.getMyProfile(userId, email);
         return ResponseEntity.ok(response);
     }
 

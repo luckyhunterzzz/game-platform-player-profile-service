@@ -24,14 +24,14 @@ public class PlayerProfileHeroService {
     private final Clock clock;
 
     public List<PlayerProfileHero> getMyHeroes(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
 
         return playerProfileHeroRepository.findAllByPlayerProfileIdOrderByCreatedAtAsc(playerProfile.getId());
     }
 
     @Transactional
     public PlayerProfileHero addHero(UUID userId, String email, Long heroId, HeroPowerGrade powerGrade) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         OffsetDateTime now = OffsetDateTime.now(clock);
         HeroPowerGrade resolvedPowerGrade = powerGrade != null ? powerGrade : HeroPowerGrade.FULLY_ASCENDED;
 
@@ -52,7 +52,7 @@ public class PlayerProfileHeroService {
                                                   String email,
                                                   UUID profileHeroId,
                                                   HeroPowerGrade powerGrade) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
 
         PlayerProfileHero playerProfileHero = playerProfileHeroRepository
                 .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())
@@ -69,7 +69,7 @@ public class PlayerProfileHeroService {
                                                    String email,
                                                    UUID profileHeroId,
                                                    Integer talentLevel) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
 
         PlayerProfileHero playerProfileHero = playerProfileHeroRepository
                 .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())
@@ -83,7 +83,7 @@ public class PlayerProfileHeroService {
 
     @Transactional
     public void deleteHero(UUID userId, String email, UUID profileHeroId) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
 
         PlayerProfileHero playerProfileHero = playerProfileHeroRepository
                 .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())

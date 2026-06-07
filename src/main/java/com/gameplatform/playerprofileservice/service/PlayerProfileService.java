@@ -16,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 
 @Service
 @RequiredArgsConstructor
@@ -28,15 +29,22 @@ public class PlayerProfileService {
     private final Clock clock;
 
     @Transactional
-    public PlayerProfile getOrCreateProfile(UUID userId, String email) {
+    public PlayerProfile initializeProfile(UUID userId, String email) {
         return playerProfileRepository.findByUserId(userId)
                 .map(existingProfile -> syncEmailIfChanged(existingProfile, email))
                 .orElseGet(() -> createProfile(userId, email));
     }
 
     @Transactional
+    public PlayerProfile getRequiredProfile(UUID userId, String email) {
+        return playerProfileRepository.findByUserId(userId)
+                .map(existingProfile -> syncEmailIfChanged(existingProfile, email))
+                .orElseThrow(() -> new ResponseStatusException(CONFLICT, "Player profile is not initialized"));
+    }
+
+    @Transactional
     public PlayerProfile updateProfile(UUID userId, String email, PlayerProfileUpdateRequestDto request) {
-        PlayerProfile playerProfile = getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = getRequiredProfile(userId, email);
 
         validateRequiredProfileFields(request);
 

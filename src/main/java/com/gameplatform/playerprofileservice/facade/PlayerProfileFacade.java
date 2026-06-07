@@ -17,8 +17,13 @@ public class PlayerProfileFacade {
     private final PlayerProfileService playerProfileService;
     private final PlayerProfileResponseConverter playerProfileResponseConverter;
 
-    public PlayerProfileResponseDto getOrCreateMyProfile(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+    public PlayerProfileResponseDto initializeMyProfile(UUID userId, String email) {
+        PlayerProfile playerProfile = playerProfileService.initializeProfile(userId, email);
+        return playerProfileResponseConverter.toResponse(playerProfile);
+    }
+
+    public PlayerProfileResponseDto getMyProfile(UUID userId, String email) {
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         return playerProfileResponseConverter.toResponse(playerProfile);
     }
 
