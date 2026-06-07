@@ -85,7 +85,7 @@ class PlayerWarAttackTeamServiceTest {
                 buildTeamHero(teams.get(1).getId(), UUID.randomUUID(), (short) 2)
         );
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
         when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(teamWarAttackHeroRepository.findAllByTeamWarAttackIdIn(teams.stream().map(TeamWarAttack::getId).toList()))
                 .thenReturn(teamHeroes);
@@ -126,7 +126,7 @@ class PlayerWarAttackTeamServiceTest {
         UUID profileHeroId = UUID.randomUUID();
         List<TeamWarAttack> teams = buildTeams(profileId, universalWarMode.getId());
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
         when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(playerProfileHeroRepository.findAllById(any())).thenReturn(List.of(PlayerProfileHero.builder()
                 .id(profileHeroId)
@@ -159,7 +159,7 @@ class PlayerWarAttackTeamServiceTest {
         UUID profileHeroId = UUID.randomUUID();
         List<TeamWarAttack> teams = buildTeams(profileId, universalWarMode.getId());
 
-        when(playerProfileService.getOrCreateProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(buildProfile(profileId, userId));
         when(teamWarAttackRepository.findAllByPlayerProfileId(profileId)).thenReturn(teams);
         when(playerProfileHeroRepository.findAllById(any())).thenReturn(List.of(PlayerProfileHero.builder()
                 .id(profileHeroId)
