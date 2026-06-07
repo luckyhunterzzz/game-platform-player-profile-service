@@ -36,7 +36,7 @@ public class PlayerWarStatTeamTagService {
     private final Clock clock;
 
     public WarStatTeamTagCatalogView getCatalog(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         return buildCatalogView(playerProfile.getId());
     }
 
@@ -44,7 +44,7 @@ public class PlayerWarStatTeamTagService {
     public WarStatTeamTagCatalogView createCustomTag(UUID userId,
                                                      String email,
                                                      PlayerWarStatTeamTagUpsertRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         validateCustomTagRequest(playerProfile.getId(), null, request);
 
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -69,7 +69,7 @@ public class PlayerWarStatTeamTagService {
                                                      String email,
                                                      UUID tagId,
                                                      PlayerWarStatTeamTagUpsertRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         WarStatTeamTag tag = warStatTeamTagRepository.findByIdAndPlayerProfileId(tagId, playerProfile.getId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "War statistic team tag not found"));
 
@@ -86,7 +86,7 @@ public class PlayerWarStatTeamTagService {
 
     @Transactional
     public WarStatTeamTagCatalogView deleteCustomTag(UUID userId, String email, UUID tagId) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         WarStatTeamTag tag = warStatTeamTagRepository.findByIdAndPlayerProfileId(tagId, playerProfile.getId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "War statistic team tag not found"));
 

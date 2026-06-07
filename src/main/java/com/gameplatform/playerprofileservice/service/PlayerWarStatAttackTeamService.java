@@ -74,7 +74,7 @@ public class PlayerWarStatAttackTeamService {
 
     @Transactional
     public WarStatAttackTeamsView getMyTeams(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         List<WarStatAttackTeam> teams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
         return buildTeamsView(warModes, teams);
@@ -82,7 +82,7 @@ public class PlayerWarStatAttackTeamService {
 
     @Transactional
     public WarStatAttackTeamsView createTeam(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
 
@@ -108,7 +108,7 @@ public class PlayerWarStatAttackTeamService {
     public WarStatAttackTeamsView importWarTeam(UUID userId,
                                                 String email,
                                                 PlayerWarStatAttackImportRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> allWarModes = getActiveWarModes();
         List<WarMode> statisticWarModes = getStatisticWarModes();
         WarMode requestedWarMode = resolveWarMode(request.warModeCode(), allWarModes);
@@ -180,7 +180,7 @@ public class PlayerWarStatAttackTeamService {
                                              String email,
                                              UUID teamId,
                                              PlayerWarStatAttackTeamUpdateRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
         boolean teamLocked = warStatAttackRecordRepository.existsByTeamId(team.getId());
@@ -234,7 +234,7 @@ public class PlayerWarStatAttackTeamService {
                                                  String email,
                                                  UUID teamId,
                                                  PlayerWarStatTeamTagsUpdateRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
 
@@ -265,7 +265,7 @@ public class PlayerWarStatAttackTeamService {
     public WarStatAttackTeamsView reorderTeams(UUID userId,
                                                String email,
                                                PlayerWarStatAttackTeamsReorderRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         List<WarStatAttackTeam> existingTeams = warStatAttackTeamRepository.findAllByPlayerProfileIdOrderByTeamOrderAsc(playerProfile.getId());
 
@@ -316,7 +316,7 @@ public class PlayerWarStatAttackTeamService {
 
     @Transactional
     public WarStatAttackTeamsView deleteTeam(UUID userId, String email, UUID teamId) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
         warStatAttackTeamRepository.delete(team);
@@ -328,7 +328,7 @@ public class PlayerWarStatAttackTeamService {
                                                String email,
                                                UUID teamId,
                                                PlayerWarStatAttackRecordUpsertRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
         ensureTeamHasHeroes(team.getId());
@@ -357,7 +357,7 @@ public class PlayerWarStatAttackTeamService {
                                                UUID teamId,
                                                UUID recordId,
                                                PlayerWarStatAttackRecordUpsertRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
         WarStatAttackRecord record = warStatAttackRecordRepository.findByIdAndTeamId(recordId, team.getId())
@@ -379,7 +379,7 @@ public class PlayerWarStatAttackTeamService {
 
     @Transactional
     public WarStatAttackTeamsView deleteRecord(UUID userId, String email, UUID teamId, UUID recordId) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getStatisticWarModes();
         WarStatAttackTeam team = getTeamOrThrow(playerProfile.getId(), teamId);
         WarStatAttackRecord record = warStatAttackRecordRepository.findByIdAndTeamId(recordId, team.getId())
