@@ -54,7 +54,7 @@ public class PlayerWarAttackTeamService {
 
     @Transactional
     public WarAttackTeamsView getMyTeams(UUID userId, String email) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getActiveWarModes();
         List<TeamWarAttack> teams = getOrCreateTeams(playerProfile.getId(), warModes);
         return buildTeamsView(warModes, teams);
@@ -64,7 +64,7 @@ public class PlayerWarAttackTeamService {
     public WarAttackTeamsView updateMyTeams(UUID userId,
                                             String email,
                                             PlayerWarAttackTeamsUpdateRequestDto request) {
-        PlayerProfile playerProfile = playerProfileService.getOrCreateProfile(userId, email);
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         List<WarMode> warModes = getActiveWarModes();
         Map<String, WarMode> warModeByCode = warModes.stream()
                 .collect(Collectors.toMap(mode -> mode.getCode().toUpperCase(), Function.identity()));
