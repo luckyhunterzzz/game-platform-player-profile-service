@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: player-profile-service
+  cache:
+    type: simple
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
@@ -25,6 +27,15 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%X{requestId}] %-5level %logger{36} - %msg%n"
+
+app:
+  cache:
+    ttl:
+      profile: 30m
+      profile-heroes: 30m
+      war-attack-teams: 30m
+      war-stat-attack-teams: 30m
+      war-stat-tags: 30m
 
 sentry:
   dsn: ${SENTRY_DSN:}
