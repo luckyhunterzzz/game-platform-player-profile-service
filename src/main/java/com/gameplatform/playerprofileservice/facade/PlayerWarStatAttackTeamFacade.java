@@ -1,5 +1,7 @@
 package com.gameplatform.playerprofileservice.facade;
 
+import com.gameplatform.playerprofileservice.configuration.CacheNames;
+import com.gameplatform.playerprofileservice.configuration.ProfileCacheEvictionService;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackImportRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackRecordUpsertRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeamUpdateRequestDto;
@@ -13,6 +15,7 @@ import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTea
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatTeamTagResponseDto;
 import com.gameplatform.playerprofileservice.service.PlayerWarStatAttackTeamService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -22,50 +25,66 @@ import java.util.UUID;
 public class PlayerWarStatAttackTeamFacade {
 
     private final PlayerWarStatAttackTeamService playerWarStatAttackTeamService;
+    private final ProfileCacheEvictionService profileCacheEvictionService;
 
+    @Cacheable(cacheNames = CacheNames.MY_WAR_STAT_ATTACK_TEAMS)
     public PlayerWarStatAttackTeamsResponseDto getMyTeams(UUID userId, String email) {
         return toResponse(playerWarStatAttackTeamService.getMyTeams(userId, email));
     }
 
     public PlayerWarStatAttackTeamsResponseDto createTeam(UUID userId, String email) {
-        return toResponse(playerWarStatAttackTeamService.createTeam(userId, email));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.createTeam(userId, email));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto importWarTeam(UUID userId,
                                                              String email,
                                                              PlayerWarStatAttackImportRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.importWarTeam(userId, email, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.importWarTeam(userId, email, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto updateTeam(UUID userId,
                                                           String email,
                                                           UUID teamId,
                                                           PlayerWarStatAttackTeamUpdateRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.updateTeam(userId, email, teamId, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.updateTeam(userId, email, teamId, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto updateTeamTags(UUID userId,
                                                               String email,
                                                               UUID teamId,
                                                               PlayerWarStatTeamTagsUpdateRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.updateTeamTags(userId, email, teamId, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.updateTeamTags(userId, email, teamId, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto reorderTeams(UUID userId,
                                                             String email,
                                                             PlayerWarStatAttackTeamsReorderRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.reorderTeams(userId, email, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.reorderTeams(userId, email, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto deleteTeam(UUID userId, String email, UUID teamId) {
-        return toResponse(playerWarStatAttackTeamService.deleteTeam(userId, email, teamId));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.deleteTeam(userId, email, teamId));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto createRecord(UUID userId,
                                                             String email,
                                                             UUID teamId,
                                                             PlayerWarStatAttackRecordUpsertRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.createRecord(userId, email, teamId, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.createRecord(userId, email, teamId, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto updateRecord(UUID userId,
@@ -73,11 +92,15 @@ public class PlayerWarStatAttackTeamFacade {
                                                             UUID teamId,
                                                             UUID recordId,
                                                             PlayerWarStatAttackRecordUpsertRequestDto request) {
-        return toResponse(playerWarStatAttackTeamService.updateRecord(userId, email, teamId, recordId, request));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.updateRecord(userId, email, teamId, recordId, request));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     public PlayerWarStatAttackTeamsResponseDto deleteRecord(UUID userId, String email, UUID teamId, UUID recordId) {
-        return toResponse(playerWarStatAttackTeamService.deleteRecord(userId, email, teamId, recordId));
+        PlayerWarStatAttackTeamsResponseDto response = toResponse(playerWarStatAttackTeamService.deleteRecord(userId, email, teamId, recordId));
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     private PlayerWarStatAttackTeamsResponseDto toResponse(PlayerWarStatAttackTeamService.WarStatAttackTeamsView view) {

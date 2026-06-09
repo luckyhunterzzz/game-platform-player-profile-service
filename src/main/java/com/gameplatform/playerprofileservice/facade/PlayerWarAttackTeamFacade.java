@@ -1,5 +1,7 @@
 package com.gameplatform.playerprofileservice.facade;
 
+import com.gameplatform.playerprofileservice.configuration.CacheNames;
+import com.gameplatform.playerprofileservice.configuration.ProfileCacheEvictionService;
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarAttackTeamsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarAttackSlotResponseDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarAttackTeamResponseDto;
@@ -7,6 +9,7 @@ import com.gameplatform.playerprofileservice.dto.response.PlayerWarAttackTeamsRe
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarModeResponseDto;
 import com.gameplatform.playerprofileservice.service.PlayerWarAttackTeamService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,7 +20,9 @@ import java.util.UUID;
 public class PlayerWarAttackTeamFacade {
 
     private final PlayerWarAttackTeamService playerWarAttackTeamService;
+    private final ProfileCacheEvictionService profileCacheEvictionService;
 
+    @Cacheable(cacheNames = CacheNames.MY_WAR_ATTACK_TEAMS)
     public PlayerWarAttackTeamsResponseDto getMyTeams(UUID userId, String email) {
         PlayerWarAttackTeamService.WarAttackTeamsView teamsView = playerWarAttackTeamService.getMyTeams(userId, email);
         return toResponse(teamsView);
@@ -27,7 +32,9 @@ public class PlayerWarAttackTeamFacade {
                                                          String email,
                                                          PlayerWarAttackTeamsUpdateRequestDto request) {
         PlayerWarAttackTeamService.WarAttackTeamsView teamsView = playerWarAttackTeamService.updateMyTeams(userId, email, request);
-        return toResponse(teamsView);
+        PlayerWarAttackTeamsResponseDto response = toResponse(teamsView);
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
     }
 
     private PlayerWarAttackTeamsResponseDto toResponse(PlayerWarAttackTeamService.WarAttackTeamsView teamsView) {
