@@ -7,7 +7,7 @@ import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatAttackTeam
 import com.gameplatform.playerprofileservice.dto.request.PlayerWarStatTeamTagsUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerWarStatAttackTeamsResponseDto;
 import com.gameplatform.playerprofileservice.facade.PlayerWarStatAttackTeamFacade;
-import com.gameplatform.playerprofileservice.utility.HeaderNames;
+import com.gameplatform.playerprofileservice.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,98 +30,131 @@ import java.util.UUID;
 public class PlayerWarStatAttackTeamController {
 
     private final PlayerWarStatAttackTeamFacade playerWarStatAttackTeamFacade;
+    private final CurrentUserProvider currentUserProvider;
 
     @GetMapping
-    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> getMyTeams(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email
-    ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.getMyTeams(userId, email));
+    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> getMyTeams() {
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.getMyTeams(
+                currentUser.userId(),
+                currentUser.email()
+        ));
     }
 
     @PostMapping
-    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> createTeam(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email
-    ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.createTeam(userId, email));
+    public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> createTeam() {
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.createTeam(
+                currentUser.userId(),
+                currentUser.email()
+        ));
     }
 
     @PostMapping("/import-war-team")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> importWarTeam(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @RequestBody @Valid PlayerWarStatAttackImportRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.importWarTeam(userId, email, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.importWarTeam(
+                currentUser.userId(),
+                currentUser.email(),
+                request
+        ));
     }
 
     @PutMapping("/{teamId}")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> updateTeam(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId,
             @RequestBody @Valid PlayerWarStatAttackTeamUpdateRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeam(userId, email, teamId, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeam(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId,
+                request
+        ));
     }
 
     @PutMapping("/{teamId}/tags")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> updateTeamTags(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId,
             @RequestBody @Valid PlayerWarStatTeamTagsUpdateRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeamTags(userId, email, teamId, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateTeamTags(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId,
+                request
+        ));
     }
 
     @PutMapping("/order")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> reorderTeams(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @RequestBody @Valid PlayerWarStatAttackTeamsReorderRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.reorderTeams(userId, email, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.reorderTeams(
+                currentUser.userId(),
+                currentUser.email(),
+                request
+        ));
     }
 
     @DeleteMapping("/{teamId}")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> deleteTeam(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.deleteTeam(userId, email, teamId));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.deleteTeam(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId
+        ));
     }
 
     @PostMapping("/{teamId}/records")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> createRecord(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId,
             @RequestBody @Valid PlayerWarStatAttackRecordUpsertRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.createRecord(userId, email, teamId, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.createRecord(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId,
+                request
+        ));
     }
 
     @PutMapping("/{teamId}/records/{recordId}")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> updateRecord(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId,
             @PathVariable UUID recordId,
             @RequestBody @Valid PlayerWarStatAttackRecordUpsertRequestDto request
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateRecord(userId, email, teamId, recordId, request));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.updateRecord(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId,
+                recordId,
+                request
+        ));
     }
 
     @DeleteMapping("/{teamId}/records/{recordId}")
     public ResponseEntity<PlayerWarStatAttackTeamsResponseDto> deleteRecord(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @PathVariable UUID teamId,
             @PathVariable UUID recordId
     ) {
-        return ResponseEntity.ok(playerWarStatAttackTeamFacade.deleteRecord(userId, email, teamId, recordId));
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerWarStatAttackTeamFacade.deleteRecord(
+                currentUser.userId(),
+                currentUser.email(),
+                teamId,
+                recordId
+        ));
     }
 }
