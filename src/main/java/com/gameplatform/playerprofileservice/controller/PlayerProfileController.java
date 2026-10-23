@@ -3,7 +3,7 @@ package com.gameplatform.playerprofileservice.controller;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerProfileResponseDto;
 import com.gameplatform.playerprofileservice.facade.PlayerProfileFacade;
-import com.gameplatform.playerprofileservice.utility.HeaderNames;
+import com.gameplatform.playerprofileservice.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,11 +12,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,32 +22,38 @@ import java.util.UUID;
 public class PlayerProfileController {
 
     private final PlayerProfileFacade playerProfileFacade;
+    private final CurrentUserProvider currentUserProvider;
 
     @PostMapping("/me/init")
-    public ResponseEntity<PlayerProfileResponseDto> initializeMyProfile(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email
-    ) {
-        PlayerProfileResponseDto response = playerProfileFacade.initializeMyProfile(userId, email);
+    public ResponseEntity<PlayerProfileResponseDto> initializeMyProfile() {
+        var currentUser = currentUserProvider.getCurrentUser();
+        PlayerProfileResponseDto response = playerProfileFacade.initializeMyProfile(
+                currentUser.userId(),
+                currentUser.email()
+        );
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
-    public ResponseEntity<PlayerProfileResponseDto> getMyProfile(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email
-    ) {
-        PlayerProfileResponseDto response = playerProfileFacade.getMyProfile(userId, email);
+    public ResponseEntity<PlayerProfileResponseDto> getMyProfile() {
+        var currentUser = currentUserProvider.getCurrentUser();
+        PlayerProfileResponseDto response = playerProfileFacade.getMyProfile(
+                currentUser.userId(),
+                currentUser.email()
+        );
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/me")
     public ResponseEntity<PlayerProfileResponseDto> updateMyProfile(
-            @RequestHeader(HeaderNames.USER_ID) UUID userId,
-            @RequestHeader(HeaderNames.USER_EMAIL) String email,
             @RequestBody @Valid PlayerProfileUpdateRequestDto request
     ) {
-        PlayerProfileResponseDto response = playerProfileFacade.updateMyProfile(userId, email, request);
+        var currentUser = currentUserProvider.getCurrentUser();
+        PlayerProfileResponseDto response = playerProfileFacade.updateMyProfile(
+                currentUser.userId(),
+                currentUser.email(),
+                request
+        );
         return ResponseEntity.ok(response);
     }
 }
