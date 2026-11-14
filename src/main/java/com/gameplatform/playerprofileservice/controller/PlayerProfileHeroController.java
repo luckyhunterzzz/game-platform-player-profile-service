@@ -1,6 +1,7 @@
 package com.gameplatform.playerprofileservice.controller;
 
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroCreateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroCostumeCountUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroPowerGradeUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroTalentLevelUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerProfileHeroResponseDto;
@@ -73,6 +74,20 @@ public class PlayerProfileHeroController {
     ) {
         var currentUser = currentUserProvider.getCurrentUser();
         return ResponseEntity.ok(playerProfileHeroFacade.updateHeroTalentLevel(
+                currentUser.userId(),
+                currentUser.email(),
+                profileHeroId,
+                request
+        ));
+    }
+
+    @PutMapping("/{profileHeroId}/costume-count")
+    public ResponseEntity<PlayerProfileHeroResponseDto> updateHeroCostumeCount(
+            @PathVariable UUID profileHeroId,
+            @RequestBody @Valid PlayerProfileHeroCostumeCountUpdateRequestDto request
+    ) {
+        var currentUser = currentUserProvider.getCurrentUser();
+        return ResponseEntity.ok(playerProfileHeroFacade.updateHeroCostumeCount(
                 currentUser.userId(),
                 currentUser.email(),
                 profileHeroId,

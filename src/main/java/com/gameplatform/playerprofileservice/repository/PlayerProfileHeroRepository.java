@@ -12,4 +12,6 @@ public interface PlayerProfileHeroRepository extends JpaRepository<PlayerProfile
     List<PlayerProfileHero> findAllByPlayerProfileIdOrderByCreatedAtAsc(UUID playerProfileId);
 
     Optional<PlayerProfileHero> findByIdAndPlayerProfileId(UUID id, UUID playerProfileId);
+
+    List<PlayerProfileHero> findAllByIdInAndPlayerProfileId(List<UUID> ids, UUID playerProfileId);
 }
