@@ -8,11 +8,14 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
 @RequiredArgsConstructor
@@ -30,10 +33,15 @@ public class PlayerProfileHeroService {
     }
 
     @Transactional
-    public PlayerProfileHero addHero(UUID userId, String email, Long heroId, HeroPowerGrade powerGrade) {
+    public PlayerProfileHero addHero(UUID userId,
+                                     String email,
+                                     Long heroId,
+                                     HeroPowerGrade powerGrade,
+                                     Integer costumeCount) {
         PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
         OffsetDateTime now = OffsetDateTime.now(clock);
         HeroPowerGrade resolvedPowerGrade = powerGrade != null ? powerGrade : HeroPowerGrade.FULLY_ASCENDED;
+        int resolvedCostumeCount = costumeCount != null ? costumeCount : 0;
 
         PlayerProfileHero playerProfileHero = PlayerProfileHero.builder()
                 .id(UUID.randomUUID())
@@ -41,6 +49,7 @@ public class PlayerProfileHeroService {
                 .heroId(heroId)
                 .powerGrade(resolvedPowerGrade)
                 .talentLevel(0)
+                .costumeCount(resolvedCostumeCount)
                 .createdAt(now)
                 .build();
 
@@ -78,6 +87,27 @@ public class PlayerProfileHeroService {
                 ));
 
         playerProfileHero.setTalentLevel(talentLevel);
+        return playerProfileHeroRepository.save(playerProfileHero);
+    }
+
+    @Transactional
+    public PlayerProfileHero updateHeroCostumeCount(UUID userId,
+                                                    String email,
+                                                    UUID profileHeroId,
+                                                    Integer costumeCount) {
+        PlayerProfile playerProfile = playerProfileService.getRequiredProfile(userId, email);
+
+        PlayerProfileHero playerProfileHero = playerProfileHeroRepository
+                .findByIdAndPlayerProfileId(profileHeroId, playerProfile.getId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Profile hero not found with id: " + profileHeroId
+                ));
+
+        if (costumeCount < playerProfileHero.getCostumeCount()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Costume count cannot be decreased");
+        }
+
+        playerProfileHero.setCostumeCount(costumeCount);
         return playerProfileHeroRepository.save(playerProfileHero);
     }
 

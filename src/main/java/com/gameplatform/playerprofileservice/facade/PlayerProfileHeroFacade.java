@@ -5,6 +5,7 @@ import com.gameplatform.playerprofileservice.configuration.ProfileCacheEvictionS
 import com.gameplatform.playerprofileservice.converter.PlayerProfileHeroResponseConverter;
 import com.gameplatform.playerprofileservice.domain.entity.PlayerProfileHero;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroCreateRequestDto;
+import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroCostumeCountUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroPowerGradeUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.request.PlayerProfileHeroTalentLevelUpdateRequestDto;
 import com.gameplatform.playerprofileservice.dto.response.PlayerProfileHeroResponseDto;
@@ -38,7 +39,8 @@ public class PlayerProfileHeroFacade {
                 userId,
                 email,
                 request.heroId(),
-                request.powerGrade()
+                request.powerGrade(),
+                request.costumeCount()
         );
         PlayerProfileHeroResponseDto response = playerProfileHeroResponseConverter.toResponse(playerProfileHero);
         profileCacheEvictionService.evictAllProfileCaches();
@@ -69,6 +71,23 @@ public class PlayerProfileHeroFacade {
                 email,
                 profileHeroId,
                 request.talentLevel()
+        );
+        PlayerProfileHeroResponseDto response = playerProfileHeroResponseConverter.toResponse(playerProfileHero);
+        profileCacheEvictionService.evictAllProfileCaches();
+        return response;
+    }
+
+    public PlayerProfileHeroResponseDto updateHeroCostumeCount(
+            UUID userId,
+            String email,
+            UUID profileHeroId,
+            PlayerProfileHeroCostumeCountUpdateRequestDto request
+    ) {
+        PlayerProfileHero playerProfileHero = playerProfileHeroService.updateHeroCostumeCount(
+                userId,
+                email,
+                profileHeroId,
+                request.costumeCount()
         );
         PlayerProfileHeroResponseDto response = playerProfileHeroResponseConverter.toResponse(playerProfileHero);
         profileCacheEvictionService.evictAllProfileCaches();
