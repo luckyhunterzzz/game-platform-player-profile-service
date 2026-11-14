@@ -42,6 +42,9 @@ public class PlayerProfileHero {
     @Column(name = "talent_level", nullable = false)
     private Integer talentLevel;
 
+    @Column(name = "costume_count", nullable = false)
+    private Integer costumeCount;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 }

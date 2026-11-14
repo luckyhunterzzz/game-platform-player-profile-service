@@ -21,5 +21,6 @@ public class PlayerProfileHeroResponseDto {
     private Long heroId;
     private HeroPowerGrade powerGrade;
     private Integer talentLevel;
+    private Integer costumeCount;
     private OffsetDateTime createdAt;
 }

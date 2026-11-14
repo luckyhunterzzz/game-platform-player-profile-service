@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -79,8 +80,8 @@ class PlayerProfileHeroServiceTest {
         when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
         when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        PlayerProfileHero firstResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null);
-        PlayerProfileHero secondResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null);
+        PlayerProfileHero firstResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null, null);
+        PlayerProfileHero secondResult = playerProfileHeroService.addHero(userId, "user@example.com", 101L, null, null);
 
         assertEquals(101L, firstResult.getHeroId());
         assertEquals(101L, secondResult.getHeroId());
@@ -90,6 +91,8 @@ class PlayerProfileHeroServiceTest {
         assertEquals(HeroPowerGrade.FULLY_ASCENDED, secondResult.getPowerGrade());
         assertEquals(0, firstResult.getTalentLevel());
         assertEquals(0, secondResult.getTalentLevel());
+        assertEquals(0, firstResult.getCostumeCount());
+        assertEquals(0, secondResult.getCostumeCount());
     }
 
     @Test
@@ -105,12 +108,69 @@ class PlayerProfileHeroServiceTest {
                 userId,
                 "user@example.com",
                 303L,
-                HeroPowerGrade.FIRST_TIER
+                HeroPowerGrade.FIRST_TIER,
+                4
         );
 
         assertEquals(303L, result.getHeroId());
         assertEquals(HeroPowerGrade.FIRST_TIER, result.getPowerGrade());
         assertEquals(0, result.getTalentLevel());
+        assertEquals(4, result.getCostumeCount());
+    }
+
+    @Test
+    void shouldIncreaseHeroCostumeCount() {
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID profileHeroId = UUID.randomUUID();
+
+        PlayerProfile playerProfile = buildProfile(profileId, userId);
+        PlayerProfileHero playerProfileHero = buildProfileHero(profileId, 101L);
+        playerProfileHero.setId(profileHeroId);
+        playerProfileHero.setCostumeCount(4);
+
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
+                .thenReturn(Optional.of(playerProfileHero));
+        when(playerProfileHeroRepository.save(any(PlayerProfileHero.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlayerProfileHero updated = playerProfileHeroService.updateHeroCostumeCount(
+                userId,
+                "user@example.com",
+                profileHeroId,
+                5
+        );
+
+        assertEquals(5, updated.getCostumeCount());
+        verify(playerProfileHeroRepository).save(playerProfileHero);
+    }
+
+    @Test
+    void shouldRejectHeroCostumeCountDecrease() {
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID profileHeroId = UUID.randomUUID();
+
+        PlayerProfile playerProfile = buildProfile(profileId, userId);
+        PlayerProfileHero playerProfileHero = buildProfileHero(profileId, 101L);
+        playerProfileHero.setId(profileHeroId);
+        playerProfileHero.setCostumeCount(5);
+
+        when(playerProfileService.getRequiredProfile(userId, "user@example.com")).thenReturn(playerProfile);
+        when(playerProfileHeroRepository.findByIdAndPlayerProfileId(profileHeroId, profileId))
+                .thenReturn(Optional.of(playerProfileHero));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> playerProfileHeroService.updateHeroCostumeCount(
+                        userId,
+                        "user@example.com",
+                        profileHeroId,
+                        4
+                )
+        );
+
+        assertEquals("Costume count cannot be decreased", exception.getReason());
     }
 
     @Test
@@ -157,6 +217,7 @@ class PlayerProfileHeroServiceTest {
                 .heroId(101L)
                 .powerGrade(HeroPowerGrade.FULLY_ASCENDED)
                 .talentLevel(0)
+                .costumeCount(0)
                 .createdAt(OffsetDateTime.parse("2026-04-21T12:00:00Z"))
                 .build();
 
